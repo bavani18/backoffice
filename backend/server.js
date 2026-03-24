@@ -1,0 +1,1427 @@
+require("dotenv").config();
+const express = require("express");
+const cors = require("cors");
+const { sql, poolPromise } = require("./db");
+const { v4: uuidv4 } = require("uuid");
+const multer = require('multer'); 
+const path = require("path");
+const fs = require("fs");
+
+
+const app = express();
+
+// 🔥 IMPORTANT FIX
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ limit: "10mb", extended: true }));
+app.use(cors());
+app.use(express.json());
+app.use("/images", express.static(path.join(__dirname, "images")));
+
+/* ------------------- GET ALL KITCHENS ------------------- */
+app.get("/kitchen", async (req, res) => {
+  try {
+    const { KitchenTypeCode } = req.query; // optional filter
+    const pool = await poolPromise;
+
+    // Base query
+    let query = `
+      SELECT KitchenTypeId, KitchenTypeCode, KitchenTypeName, isActive
+      FROM Kitchen
+    `;
+
+    // Add WHERE only if KitchenTypeCode is provided
+    if (KitchenTypeCode) {
+      query += " WHERE KitchenTypeCode = @KitchenTypeCode";
+    }
+
+    query += " ORDER BY KitchenTypeCode";
+
+    const request = pool.request();
+
+    // Bind input parameter correctly
+    if (KitchenTypeCode) {
+      // Use INT if KitchenTypeCode is numeric in SQL
+      request.input("KitchenTypeCode", sql.Int, parseInt(KitchenTypeCode));
+    }
+
+    // Optional: measure query time
+    // console.time("KitchenQuery");
+    const result = await request.query(query);
+    // console.timeEnd("KitchenQuery");
+
+    res.json(result.recordset);
+  } catch (err) {
+    console.error("Error fetching kitchens:", err);
+    res.status(500).send("Server Error");
+  }
+});
+
+/* ------------------- GET NEXT KITCHEN CODE ------------------- */
+app.get("/kitchen/nextcode", async (req, res) => {
+  try {
+    const pool = await poolPromise;
+
+    const result = await pool.request().query(`
+      SELECT NextNumber
+      FROM Autonumbers
+      WHERE TableName='KitchenType'
+      AND FieldName='KitchenTypeCode'
+    `);
+
+    res.json(result.recordset[0]);
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Server Error");
+  }
+});
+
+/* ------------------- CREATE KITCHEN ------------------- */
+app.post("/kitchen", async (req, res) => {
+  try {
+    const {
+      KitchenTypeCode,
+      KitchenTypeName,
+      isActive,
+      BusinessUnitId,
+      CreatedBy
+    } = req.body;
+
+    if (!KitchenTypeCode || !KitchenTypeName) {
+      return res.status(400).send("Kitchen code and name required");
+    }
+      
+   const pool = await poolPromise;
+    const KitchenTypeId = uuidv4();
+
+    await pool.request()
+      .input("KitchenTypeId", sql.UniqueIdentifier, KitchenTypeId)
+      .input("KitchenTypeCode", sql.Numeric(18, 0), KitchenTypeCode)
+      .input("KitchenTypeName", sql.VarChar(100), KitchenTypeName)
+      .input("isActive", sql.Bit, isActive)
+      .input("BusinessUnitId", sql.UniqueIdentifier, BusinessUnitId)
+      .input("CreatedBy", sql.UniqueIdentifier, CreatedBy)
+      .input("CreatedOn", sql.DateTime, new Date())
+      .query(`
+        INSERT INTO Kitchen
+        (KitchenTypeId, KitchenTypeCode, KitchenTypeName, isActive, BusinessUnitId, CreatedBy, CreatedOn)
+        VALUES
+        (@KitchenTypeId, @KitchenTypeCode, @KitchenTypeName, @isActive, @BusinessUnitId, @CreatedBy, @CreatedOn)
+      `);
+
+    // Update Autonumber
+    await pool.request().query(`
+      UPDATE Autonumbers
+      SET NextNumber = NextNumber + 1
+      WHERE TableName='KitchenType'
+      AND FieldName='KitchenTypeCode'
+    `);
+
+    res.json({ message: "Kitchen Created Successfully" });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Save failed");
+  }
+});
+
+/* ------------------- UPDATE KITCHEN ------------------- */
+app.put("/kitchen/:id", async (req, res) => {
+  try {
+    const KitchenTypeId = req.params.id;
+    const {
+      KitchenTypeCode,
+      KitchenTypeName,
+      isActive,
+      ModifiedBy
+    } = req.body;
+
+    if (!KitchenTypeCode || !KitchenTypeName) {
+      return res.status(400).send("Kitchen code and name required");
+    }
+
+    const pool = await poolPromise;
+
+    await pool.request()
+      .input("KitchenTypeId", sql.UniqueIdentifier, KitchenTypeId)
+      .input("KitchenTypeCode", sql.Numeric(18, 0), KitchenTypeCode)
+      .input("KitchenTypeName", sql.VarChar(100), KitchenTypeName)
+      .input("isActive", sql.Bit, isActive)
+      .input("ModifiedBy", sql.UniqueIdentifier, ModifiedBy)
+      .input("ModifiedOn", sql.DateTime, new Date())
+      .query(`
+        UPDATE Kitchen
+        SET
+          KitchenTypeCode = @KitchenTypeCode,
+          KitchenTypeName = @KitchenTypeName,
+          isActive = @isActive,
+          ModifiedBy = @ModifiedBy,
+          ModifiedOn = @ModifiedOn
+        WHERE KitchenTypeId = @KitchenTypeId
+      `);
+
+    res.json({ message: "Kitchen Updated Successfully" });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Update failed");
+  }
+});
+
+/* ------------------- DELETE KITCHEN ------------------- */
+app.delete("/kitchen/:id", async (req, res) => {
+  try {
+    const KitchenTypeId = req.params.id;
+    const pool = await poolPromise;
+
+    // Check dish mapping
+    const check = await pool.request()
+      .input("KitchenTypeId", sql.UniqueIdentifier, KitchenTypeId)
+      .query(`
+        SELECT *
+        FROM DishKitchenType
+        WHERE KitchenTypeId = @KitchenTypeId
+      `);
+
+    if (check.recordset.length > 0) {
+      return res.status(400).json({
+        message: "Dish list having this kitchen type. Cannot delete"
+      });
+    }
+
+    await pool.request()
+      .input("KitchenTypeId", sql.UniqueIdentifier, KitchenTypeId)
+      .query(`
+        DELETE FROM Kitchen
+        WHERE KitchenTypeId = @KitchenTypeId
+      `);
+
+    res.json({ message: "Kitchen Deleted Successfully" });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Delete failed");
+  }
+});
+//======================================================END KITCHEN----============
+
+//-============================================start CATEGORIES==============
+
+// --- Multer config for image upload ---
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = path.join(__dirname, "images", "Dish");
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + "_" + file.originalname);
+  },
+});
+const upload = multer({ storage });
+
+// ---------------- GET ALL CATEGORIES ----------------
+app.get("/category", async (req, res) => {
+  try {
+    const { CategoryCode } = req.query;
+    const pool = await poolPromise;
+    let query = `SELECT 
+C.*,
+I.ImageName
+FROM CategoryMaster C
+LEFT JOIN ImageList I ON C.ImageId = I.ImageId`;
+
+    if (CategoryCode) query += " WHERE CategoryCode = @CategoryCode";
+    const request = pool.request();
+    if (CategoryCode) request.input("CategoryCode", sql.VarChar, CategoryCode);
+    const result = await request.query(query);
+    res.json(result.recordset);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Server Error");
+  }
+});
+
+// ---------------- CREATE / UPDATE CATEGORY ----------------
+app.post("/category", upload.single("image"), async (req, res) => {
+  try {
+    const {
+      CategoryId,
+      CategoryCode,
+      CategoryName,
+      SortCode,
+      isActive,
+      ShortName,
+      KitchenTypes,
+      Modifiers,
+      BackColor,
+      ForeColor,
+      isKitchenPrint,
+      isDiscountAllowed,
+      isServiceCharge,
+      isDispName,
+      isMemberSalesAllowed,
+      isTaxAllowed,
+      NameInOtherLanguage,
+    } = req.body;
+
+ const safeBackColor =
+  typeof BackColor === "string" && BackColor.startsWith("#")
+    ? BackColor
+    : "#000000";
+
+const safeForeColor =
+  typeof ForeColor === "string" && ForeColor.startsWith("#")
+    ? ForeColor
+    : "#ffffff";
+    const pool = await poolPromise;
+   let catId = CategoryId;
+
+if (!catId || catId === "") {
+  catId = uuidv4();
+}
+
+    let imageId = null;
+    let imageName = null;
+
+    if (req.file) {
+      imageId = uuidv4();
+      imageName = req.file.filename;
+      await pool
+        .request()
+        .input("ImageId", sql.UniqueIdentifier, imageId)
+        .input("ImageName", sql.VarChar(100), imageName)
+        .query("INSERT INTO ImageList (ImageId, ImageName) VALUES (@ImageId, @ImageName)");
+    }
+
+    // Check if updating or creating
+    const exists = await pool
+      .request()
+      .input("CategoryId", sql.UniqueIdentifier, catId)
+      .query("SELECT CategoryId FROM CategoryMaster WHERE CategoryId=@CategoryId");
+
+   if (exists.recordset.length > 0) {
+
+let request = pool.request()
+.input("CategoryId", sql.UniqueIdentifier, catId)
+.input("CategoryCode", sql.VarChar(20), CategoryCode)
+.input("CategoryName", sql.VarChar(100), CategoryName)
+.input("SortCode", sql.Int, SortCode)
+.input("isActive", sql.Bit, isActive ?? false)
+.input("ShortName", sql.VarChar(50), ShortName)
+.input("BackColor", sql.NVarChar(50), safeBackColor)
+.input("ForeColor", sql.NVarChar(50), safeForeColor)
+.input("isKitchenPrint", sql.Bit, isKitchenPrint ?? false)
+.input("isDiscountAllowed", sql.Bit, isDiscountAllowed ?? false)
+.input("isServiceCharge", sql.Bit, isServiceCharge ?? false)
+.input("isDispName", sql.Bit, isDispName ?? false)
+.input("isMemberSalesAllowed", sql.Bit, isMemberSalesAllowed ?? false)
+.input("isTaxAllowed", sql.Bit, isTaxAllowed ?? false)
+.input("NameInOtherLanguage", sql.VarChar(100), NameInOtherLanguage);
+
+// ⭐ only add ImageId if new image uploaded
+request.input("ImageId", sql.UniqueIdentifier, imageId || null);
+
+await request.query(`
+UPDATE CategoryMaster SET
+CategoryCode=@CategoryCode,
+CategoryName=@CategoryName,
+SortCode=@SortCode,
+isActive=@isActive,
+ShortName=@ShortName,
+ImageId = COALESCE(@ImageId, ImageId),
+BackColor=@BackColor,
+ForeColor=@ForeColor,
+isKitchenPrint=@isKitchenPrint,
+isDiscountAllowed=@isDiscountAllowed,
+isServiceCharge=@isServiceCharge,
+isDispName=@isDispName,
+isMemberSalesAllowed=@isMemberSalesAllowed,
+isTaxAllowed=@isTaxAllowed,
+NameInOtherLanguage=@NameInOtherLanguage
+WHERE CategoryId=@CategoryId
+`);
+  } else {
+      // Insert
+      await pool
+        .request()
+        .input("CategoryId", sql.UniqueIdentifier, catId)
+        .input("CategoryCode", sql.VarChar(20), CategoryCode)
+        .input("CategoryName", sql.VarChar(100), CategoryName)
+        .input("SortCode", sql.Int, SortCode)
+        .input("isActive", sql.Bit, isActive ?? false)
+        .input("ShortName", sql.VarChar(50), ShortName)
+        .input("ImageId", sql.UniqueIdentifier, imageId)
+        .input("BackColor", sql.NVarChar(50), safeBackColor)
+        .input("ForeColor", sql.NVarChar(50), safeForeColor)
+        .input("isKitchenPrint", sql.Bit, isKitchenPrint ?? false)
+        .input("isDiscountAllowed", sql.Bit, isDiscountAllowed ?? false)
+        .input("isServiceCharge", sql.Bit, isServiceCharge ?? false)
+        .input("isDispName", sql.Bit, isDispName ?? false)
+        .input("isMemberSalesAllowed", sql.Bit, isMemberSalesAllowed ?? false)
+        .input("isTaxAllowed", sql.Bit, isTaxAllowed ?? false)
+        .input("NameInOtherLanguage", sql.VarChar(100), NameInOtherLanguage)
+        .input("CreatedBy", sql.UniqueIdentifier, uuidv4())
+        .input("CreatedOn", sql.DateTime, new Date())
+        .query(
+          `INSERT INTO CategoryMaster 
+                (CategoryId, CategoryCode, CategoryName, SortCode, isActive, ShortName, ImageId, BackColor, ForeColor, isKitchenPrint, isDiscountAllowed, isServiceCharge, isDispName, isMemberSalesAllowed, isTaxAllowed, NameInOtherLanguage, CreatedBy, CreatedOn) 
+            VALUES 
+            (@CategoryId, @CategoryCode, @CategoryName, @SortCode, @isActive, @ShortName, @ImageId, @BackColor, @ForeColor, @isKitchenPrint, @isDiscountAllowed, @isServiceCharge, @isDispName, @isMemberSalesAllowed, @isTaxAllowed, @NameInOtherLanguage, @CreatedBy, @CreatedOn)`
+        );
+    }
+
+    // Save Modifiers
+    await pool.request()
+.input("CategoryId", sql.UniqueIdentifier, catId)
+.query("DELETE FROM CategoryModifier WHERE CategoryId=@CategoryId");
+    if (Modifiers && Array.isArray(JSON.parse(Modifiers))) {
+      const mods = JSON.parse(Modifiers);
+      for (let modId of mods) {
+        await pool
+          .request()
+          .input("CategoryId", sql.UniqueIdentifier, catId)
+          .input("ModifierId", sql.UniqueIdentifier, modId)
+          .query("INSERT INTO CategoryModifier (CategoryId, ModifierId) VALUES (@CategoryId, @ModifierId)");
+      }
+    }
+
+    // Save KitchenTypes
+
+await pool.request()
+.input("CategoryId", sql.UniqueIdentifier, catId)
+.query("DELETE FROM CategoryKitchenType WHERE CategoryId=@CategoryId");
+
+let kitchens = [];
+
+if (KitchenTypes) {
+  kitchens = typeof KitchenTypes === "string"
+    ? JSON.parse(KitchenTypes)
+    : KitchenTypes;
+}
+
+if (Array.isArray(kitchens)) {
+for (let kt of kitchens) {
+
+await pool.request()
+.input("CategoryId", sql.UniqueIdentifier, catId)
+.input("KitchenTypeCode", sql.Int, kt.KitchenTypeCode)
+.input("KitchenTypeName", sql.VarChar(100), kt.KitchenTypeName)
+.query(`
+IF NOT EXISTS (
+SELECT 1 FROM CategoryKitchenType
+WHERE CategoryId=@CategoryId
+AND KitchenTypeCode=@KitchenTypeCode
+)
+INSERT INTO CategoryKitchenType
+(CategoryId,KitchenTypeCode,KitchenTypeName)
+VALUES
+(@CategoryId,@KitchenTypeCode,@KitchenTypeName)
+`);
+
+}
+}
+
+    res.json({ message: "Category saved successfully", CategoryId: catId });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send(err.message);
+  }
+});
+/* ---------------- CATEGORY KITCHEN INSERT / DELETE ---------------- */
+
+app.post("/categorykitchen", async (req, res) => {
+
+  try {
+
+    const { CategoryId, KitchenTypeCode, KitchenTypeName, checked } = req.body;
+
+    const pool = await poolPromise;
+
+    if (checked) {
+
+      // INSERT
+      await pool.request()
+        .input("CategoryId", sql.UniqueIdentifier, CategoryId)
+        .input("KitchenTypeCode", sql.Int, KitchenTypeCode)
+        .input("KitchenTypeName", sql.VarChar(100), KitchenTypeName)
+        .query(`
+          INSERT INTO CategoryKitchenType
+          (CategoryId, KitchenTypeCode, KitchenTypeName)
+          VALUES
+          (@CategoryId,@KitchenTypeCode,@KitchenTypeName)
+        `);
+
+    } else {
+
+      // DELETE
+      await pool.request()
+        .input("CategoryId", sql.UniqueIdentifier, CategoryId)
+        .input("KitchenTypeCode", sql.Int, KitchenTypeCode)
+        .query(`
+          DELETE FROM CategoryKitchenType
+          WHERE CategoryId=@CategoryId
+          AND KitchenTypeCode=@KitchenTypeCode
+        `);
+
+    }
+
+    res.json({ message: "Kitchen updated successfully" });
+
+  } catch (err) {
+
+    console.log(err);
+    res.status(500).send("Error");
+
+  }
+
+});
+//kitchen code ------------------
+
+app.get("/categorykitchen/:id", async (req,res)=>{
+try{
+
+const pool = await poolPromise;
+
+const result = await pool.request()
+.input("CategoryId", sql.UniqueIdentifier, req.params.id)
+.query(`
+SELECT KitchenTypeCode
+FROM CategoryKitchenType
+WHERE CategoryId=@CategoryId
+`);
+
+res.json(result.recordset);
+
+}catch(err){
+
+console.log(err);
+res.status(500).send("error");
+
+}
+});
+
+//------MODIFIER
+
+app.get("/modifier", async (req,res)=>{
+
+try{
+
+const pool = await poolPromise;
+
+const result = await pool.request().query(`
+SELECT ModifierId,ModifierName
+FROM ModifierMaster
+ORDER BY ModifierName
+`);
+
+res.json(result.recordset);
+
+}catch(err){
+
+console.log(err);
+res.status(500).send("error");
+
+}
+
+});
+
+//----categorymodifier
+
+app.post("/categorymodifier", async (req,res)=>{
+
+try{
+
+const { CategoryId, ModifierId, checked } = req.body;
+
+const pool = await poolPromise;
+
+if(checked){
+
+await pool.request()
+.input("CategoryId", sql.UniqueIdentifier, CategoryId)
+.input("ModifierId", sql.UniqueIdentifier, ModifierId)
+.query(`
+INSERT INTO CategoryModifier
+(CategoryId,ModifierId)
+VALUES
+(@CategoryId,@ModifierId)
+`);
+
+}else{
+
+await pool.request()
+.input("CategoryId", sql.UniqueIdentifier, CategoryId)
+.input("ModifierId", sql.UniqueIdentifier, ModifierId)
+.query(`
+DELETE FROM CategoryModifier
+WHERE CategoryId=@CategoryId
+AND ModifierId=@ModifierId
+`);
+
+}
+
+res.json({message:"Modifier updated"});
+
+}catch(err){
+
+console.log(err);
+res.status(500).send("error");
+
+}
+
+});
+
+app.get("/categorymodifier/:id", async (req,res)=>{
+
+try{
+
+const pool = await poolPromise;
+
+const result = await pool.request()
+.input("CategoryId", sql.UniqueIdentifier, req.params.id)
+.query(`
+SELECT ModifierId
+FROM CategoryModifier
+WHERE CategoryId=@CategoryId
+`);
+
+res.json(result.recordset);
+
+}catch(err){
+
+console.log(err);
+res.status(500).send("error");
+
+}
+
+});
+
+// ---------------- DELETE CATEGORY ----------------
+app.delete("/category/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const pool = await poolPromise;
+
+    // Check mapping before delete
+    const check = await pool
+      .request()
+      .input("CategoryId", sql.UniqueIdentifier, id)
+      .query("SELECT * FROM DishGroupMaster WHERE CategoryId=@CategoryId");
+
+    if (check.recordset.length > 0)
+      return res.status(400).json({ message: "Category has DishGroup mapping. Cannot delete." });
+
+    await pool.request().input("CategoryId", sql.UniqueIdentifier, id).query("DELETE FROM CategoryMaster WHERE CategoryId=@CategoryId");
+
+    res.json({ message: "Category deleted successfully" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Delete failed");
+  }
+});
+//==============================================END Category=============================
+
+//===============================================start dishgroup==========================
+
+//dishgroup get
+
+app.get("/dishgroup", async (req, res) => {
+  try {
+    const pool = await poolPromise;
+
+    const result = await pool.request().query(`
+      SELECT 
+        C.DishGroupId,
+        C.DishGroupCode,
+        C.DishGroupName,
+        C.ShortName,
+
+        ISNULL(C.isActive, 0) AS isActive,
+        ISNULL(C.isDiscountAllowed, 0) AS isDiscountAllowed,
+        ISNULL(C.isTaxAllowed, 0) AS isTaxAllowed,
+        ISNULL(C.isKitchenPrint, 0) AS isKitchenPrint,
+        ISNULL(C.isServiceCharge, 0) AS isServiceCharge,
+        ISNULL(C.isMemberSalesAllowed, 0) AS isMemberSalesAllowed,
+        ISNULL(C.ShowModifierTabOrder, 0) AS ShowModifierTabOrder,
+
+        ISNULL(C.SortCode, 0) AS SortCode,
+        ISNULL(C.KitchenSortCode, 0) AS KitchenSortCode,
+
+        C.CategoryId,
+        C.BackColor,
+        C.ForeColor,
+
+        I.ImageName
+
+      FROM DishGroupMaster C
+      LEFT JOIN ImageList I ON C.ImageId = I.ImageId
+      ORDER BY C.DishGroupCode
+    `);
+
+  res.json(result.recordset);
+
+  } catch (err) {
+    console.log(err);
+    res.status(500).send("Error");
+  }
+});
+
+//GET DishGroup by ID (Edit screen)
+
+app.get("/dishgroup/:id", async (req, res) => {
+  try {
+    const pool = await poolPromise;
+
+    const result = await pool.request()
+      .input("DishGroupId", sql.UniqueIdentifier, req.params.id)
+      .query(`
+        SELECT *
+        FROM DishGroupMaster
+        WHERE DishGroupId=@DishGroupId
+      `);
+
+    res.json(result.recordset[0]);
+
+  } catch (err) {
+    console.log(err);
+    res.status(500).send("Error");
+  }
+});
+//CREATE / UPDATE DishGroup (MAIN 🔥)
+app.post("/dishgroup", upload.single("image"), async (req, res) => {
+  try {
+    const {
+      DishGroupId,
+      DishGroupCode,
+      DishGroupName,
+      SordCode,
+      isActive,
+      isDiscountAllowed,      // ✅ ADD HERE
+      isTaxAllowed,           // ✅ ADD HERE
+      isKitchenPrint,         // ✅ ADD HERE
+      isServiceCharge,        // ✅ ADD HERE
+      isMemberSalesAllowed,   // ✅ ADD HERE
+      ShortName,
+      CategoryId,
+      KitchenSortCode,
+      BackColor,
+      ForeColor,
+      Modifiers,
+      KitchenTypes
+    } = req.body;
+
+    const pool = await poolPromise;
+
+    let imageId = null;
+
+if (req.file) {
+  imageId = uuidv4();
+
+  await pool.request()
+    .input("ImageId", sql.UniqueIdentifier, imageId)
+    .input("ImageName", sql.VarChar(100), req.file.filename)
+    .query(`
+      INSERT INTO ImageList (ImageId, ImageName)
+      VALUES (@ImageId, @ImageName)
+    `);
+}
+
+    let dgId = DishGroupId || uuidv4();
+
+    // check exists
+    const exists = await pool.request()
+      .input("DishGroupId", sql.UniqueIdentifier, dgId)
+      .query("SELECT DishGroupId FROM DishGroupMaster WHERE DishGroupId=@DishGroupId");
+
+    if (exists.recordset.length > 0) {
+
+      // 🔄 UPDATE
+      await pool.request()
+        .input("DishGroupId", sql.UniqueIdentifier, dgId)
+        .input("DishGroupCode", sql.VarChar(20), DishGroupCode)
+        .input("DishGroupName", sql.VarChar(100), DishGroupName)
+        .input("SordCode", sql.Int, SordCode)
+        .input("isActive", sql.Bit, isActive == 1)
+        .input("isDiscountAllowed", sql.Bit, isDiscountAllowed == 1)
+        .input("isTaxAllowed", sql.Bit, isTaxAllowed == 1)
+        .input("isKitchenPrint", sql.Bit, isKitchenPrint == 1)
+        .input("isServiceCharge", sql.Bit, isServiceCharge == 1)
+        .input("isMemberSalesAllowed", sql.Bit, isMemberSalesAllowed == 1)
+        .input("ShortName", sql.VarChar(50), ShortName)
+        .input("CategoryId", sql.UniqueIdentifier, CategoryId)
+        .input("KitchenSortCode", sql.Int, KitchenSortCode)
+        .input("BackColor", sql.VarChar(50), BackColor)
+        .input("ForeColor", sql.VarChar(50), ForeColor)
+        .input("ImageId", sql.UniqueIdentifier, imageId)
+        .query(`
+         UPDATE DishGroupMaster SET
+                DishGroupCode=@DishGroupCode,
+                DishGroupName=@DishGroupName,
+                SordCode=@SordCode,
+                isActive=@isActive,
+                isDiscountAllowed=@isDiscountAllowed,
+                isTaxAllowed=@isTaxAllowed,
+                isKitchenPrint=@isKitchenPrint,
+                isServiceCharge=@isServiceCharge,
+                isMemberSalesAllowed=@isMemberSalesAllowed,
+                ShortName=@ShortName,
+                CategoryId=@CategoryId,
+                KitchenSortCode=@KitchenSortCode,
+                BackColor=@BackColor,
+                ForeColor=@ForeColor,
+                ImageId = COALESCE(@ImageId, ImageId)
+                WHERE DishGroupId=@DishGroupId
+        `);
+
+    } else {
+
+      // 🆕 INSERT
+      await pool.request()
+        .input("DishGroupId", sql.UniqueIdentifier, dgId)
+        .input("DishGroupCode", sql.VarChar(20), DishGroupCode)
+        .input("DishGroupName", sql.VarChar(100), DishGroupName)
+        .input("SordCode", sql.Int, SordCode)
+        .input("isActive", sql.Bit, isActive == 1)
+        .input("isDiscountAllowed", sql.Bit, isDiscountAllowed == 1)
+        .input("isTaxAllowed", sql.Bit, isTaxAllowed == 1)
+        .input("isKitchenPrint", sql.Bit, isKitchenPrint == 1)
+        .input("isServiceCharge", sql.Bit, isServiceCharge == 1)
+        .input("isMemberSalesAllowed", sql.Bit, isMemberSalesAllowed == 1)
+        .input("ShortName", sql.VarChar(50), ShortName)
+        .input("CategoryId", sql.UniqueIdentifier, CategoryId)
+        .input("KitchenSortCode", sql.Int, KitchenSortCode)
+        .input("BackColor", sql.VarChar(50), BackColor)
+        .input("ForeColor", sql.VarChar(50), ForeColor)
+        .input("ImageId", sql.UniqueIdentifier, imageId)
+        .input("KitchenType", sql.VarChar(50), d.KitchenType || "")
+.input("SubkitchenType", sql.VarChar(50), d.SubkitchenType || "")
+        .query(`
+          INSERT INTO DishGroupMaster
+          (DishGroupId,DishGroupCode,DishGroupName,SordCode,isActive,ShortName,CategoryId,KitchenSortCode,BackColor,ForeColor,ImageId,isDiscountAllowed,
+          isTaxAllowed,isKitchenPrint,isServiceCharge,isMemberSalesAllowed,KitchenType, SubkitchenType)
+          VALUES
+          (@DishGroupId,@DishGroupCode,@DishGroupName,@SordCode,@isActive,@ShortName,@CategoryId,@KitchenSortCode,@BackColor,@ForeColor,@ImageId,@isDiscountAllowed,
+          @isTaxAllowed,@isKitchenPrint,@isServiceCharge,@isMemberSalesAllowed,@KitchenType,@SubkitchenType)
+        `);
+    }
+
+    // 🔥 DELETE OLD MODIFIERS
+    // ✅ DELETE OLD KITCHENS
+await pool.request()
+  .input("DishGroupId", sql.UniqueIdentifier, dgId)
+  .query("DELETE FROM DishGroupKitchenType WHERE DishGroupId=@DishGroupId");
+
+// ✅ INSERT KITCHENS
+let kitchens = [];
+
+if (KitchenTypes) {
+  kitchens = typeof KitchenTypes === "string"
+    ? JSON.parse(KitchenTypes)
+    : KitchenTypes;
+}
+
+for (let k of kitchens) {
+  await pool.request()
+    .input("DishGroupId", sql.UniqueIdentifier, dgId)
+    .input("KitchenTypeCode", sql.Int, k.KitchenTypeCode)
+    .input("KitchenTypeName", sql.VarChar(100), k.KitchenTypeName)
+    .query(`
+      INSERT INTO DishGroupKitchenType
+      (DishGroupId,KitchenTypeCode,KitchenTypeName)
+      VALUES
+      (@DishGroupId,@KitchenTypeCode,@KitchenTypeName)
+    `);
+}
+
+    // 🔥 DELETE OLD KITCHENS
+    // ✅ DELETE OLD MODIFIERS
+await pool.request()
+  .input("DishGroupId", sql.UniqueIdentifier, dgId)
+  .query("DELETE FROM DishGroupModifier WHERE DishGroupId=@DishGroupId");
+
+// ✅ INSERT MODIFIERS
+let mods = [];
+
+if (Modifiers) {
+  mods = typeof Modifiers === "string"
+    ? JSON.parse(Modifiers)
+    : Modifiers;
+}
+
+for (let m of mods) {
+  await pool.request()
+    .input("DishGroupId", sql.UniqueIdentifier, dgId)
+    .input("ModifierId", sql.UniqueIdentifier, m)
+    .query(`
+      INSERT INTO DishGroupModifier
+      (DishGroupId,ModifierId)
+      VALUES
+      (@DishGroupId,@ModifierId)
+    `);
+}
+
+    res.json({ message: "DishGroup saved successfully", DishGroupId: dgId });
+
+  } catch (err) {
+    console.log(err);
+    res.status(500).send("Error");
+  }
+});
+
+//DELETE DishGroup
+app.delete("/dishgroup/:id", async (req, res) => {
+  try {
+    const pool = await poolPromise;
+
+    await pool.request()
+      .input("DishGroupId", sql.UniqueIdentifier, req.params.id)
+      .query("DELETE FROM DishGroupMaster WHERE DishGroupId=@DishGroupId");
+
+    res.json({ message: "Deleted successfully" });
+
+  } catch (err) {
+    console.log(err);
+    res.status(500).send("Error");
+  }
+});
+
+//ADD / REMOVE Modifier(DISH GROUP MODIFIER API)S
+app.post("/dishgroupmodifier", async (req, res) => {
+  try {
+    const { DishGroupId, ModifierId, checked } = req.body;
+    const pool = await poolPromise;
+
+    if (checked) {
+      // ✅ INSERT
+      await pool.request()
+        .input("DishGroupId", sql.UniqueIdentifier, DishGroupId)
+        .input("ModifierId", sql.UniqueIdentifier, ModifierId)
+        .query(`
+          INSERT INTO DishGroupModifier
+          (DishGroupId, ModifierId)
+          VALUES
+          (@DishGroupId, @ModifierId)
+        `);
+    } else {
+      // ❌ DELETE
+      await pool.request()
+        .input("DishGroupId", sql.UniqueIdentifier, DishGroupId)
+        .input("ModifierId", sql.UniqueIdentifier, ModifierId)
+        .query(`
+          DELETE FROM DishGroupModifier
+          WHERE DishGroupId=@DishGroupId
+          AND ModifierId=@ModifierId
+        `);
+    }
+
+    res.json({ message: "DishGroup Modifier updated successfully" });
+
+  } catch (err) {
+    console.log(err);
+    res.status(500).send("Error");
+  }
+});
+//GET Modifier List (DISH GROUP MODIFIER API)
+app.get("/dishgroupmodifier/:id", async (req, res) => {
+  try {
+    const pool = await poolPromise;
+
+    const result = await pool.request()
+      .input("DishGroupId", sql.UniqueIdentifier, req.params.id)
+      .query(`
+        SELECT ModifierId
+        FROM DishGroupModifier
+        WHERE DishGroupId=@DishGroupId
+      `);
+
+    res.json(result.recordset);
+
+  } catch (err) {
+    console.log(err);
+    res.status(500).send("Error");
+  }
+});
+
+//GET Kitchen List (DISH GROUP KITCHEN API)
+app.get("/dishgroupkitchen/:id", async (req, res) => {
+  try {
+    const pool = await poolPromise;
+
+    const result = await pool.request()
+      .input("DishGroupId", sql.UniqueIdentifier, req.params.id)
+      .query(`
+        SELECT KitchenTypeCode
+        FROM DishGroupKitchenType
+        WHERE DishGroupId=@DishGroupId
+      `);
+
+    res.json(result.recordset);
+
+  } catch (err) {
+    console.log(err);
+    res.status(500).send("Error");
+  }
+});
+
+
+//insert dishgroupkitchen
+
+app.post("/dishgroupkitchen", async (req, res) => {
+  try {
+    const { DishGroupId, KitchenTypeCode, KitchenTypeName, checked } = req.body;
+
+    const pool = await poolPromise; // 🔥 MISSING LINE (IMPORTANT)
+
+    if (checked) {
+      await pool.request()
+        .input("DishGroupId", sql.UniqueIdentifier, DishGroupId)
+        .input("KitchenTypeCode", sql.Int, KitchenTypeCode)
+        .input("KitchenTypeName", sql.VarChar(100), KitchenTypeName)
+        .query(`
+          IF NOT EXISTS (
+            SELECT 1 FROM DishGroupKitchenType
+            WHERE DishGroupId=@DishGroupId AND KitchenTypeCode=@KitchenTypeCode
+          )
+          INSERT INTO DishGroupKitchenType
+          (DishGroupId, KitchenTypeCode, KitchenTypeName)
+          VALUES (@DishGroupId, @KitchenTypeCode, @KitchenTypeName)
+        `);
+
+    } else {
+      await pool.request()
+        .input("DishGroupId", sql.UniqueIdentifier, DishGroupId)
+        .input("KitchenTypeCode", sql.Int, KitchenTypeCode)
+        .query(`
+          DELETE FROM DishGroupKitchenType
+          WHERE DishGroupId=@DishGroupId AND KitchenTypeCode=@KitchenTypeCode
+        `);
+    }
+
+    res.send("OK");
+
+  } catch (err) {
+    console.log(err);
+    res.status(500).send(err.message);
+  }
+});
+//===============================================END dishgroup==========================
+//========================start dish================
+// ================= GET =================
+app.get("/dish", async (req, res) => {
+  try {
+    const pool = await poolPromise;
+    const result = await pool.request().query(`SELECT D.*, I.ImageName
+                                               FROM DishMaster D
+                                                LEFT JOIN ImageList I 
+                                                ON D.ImageId = I.ImageId
+                                                ORDER BY D.CreatedOn DESC`);
+    res.json(result.recordset);
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+});
+
+// ================= POST =================
+app.post("/dish", upload.single("image"), async (req, res) => {
+  try {
+
+    // console.log("FILE 👉", req.file);
+    // console.log("BODY 👉", req.body);
+
+    const pool = await poolPromise;
+    const d = req.body;
+     const dishId = uuidv4();
+     let imageId = null;
+    let imageName = null;
+
+if (req.file) {
+  imageId = uuidv4();
+ imageName = req.file.filename;
+  await pool.request()
+    .input("ImageId", sql.UniqueIdentifier, imageId)
+    .input("ImageName", sql.VarChar(100), req.file.filename)
+    .query(`
+      INSERT INTO ImageList (ImageId, ImageName)
+      VALUES (@ImageId, @ImageName)
+    `);
+}
+
+    console.log("BODY 👉", d); // debug
+
+    await pool.request()
+      .input("DishId", sql.UniqueIdentifier, dishId)
+
+      .input("DishCode", sql.NVarChar, d.DishCode || "")
+      .input("Name", sql.NVarChar, d.Name || "")
+      .input("ShortName", sql.NVarChar, d.ShortName || "")
+      .input("Description", sql.NVarChar, d.Description || "")
+      .input("DishGroupId", sql.UniqueIdentifier, d.DishGroupId || null)
+
+      .input("CurrentCost", sql.Decimal(18,2), Number(d.CurrentCost) || 0)
+      .input("SordCode", sql.Int, Number(d.SordCode) || 0)
+      .input("UnitCost", sql.Decimal(18,2), Number(d.UnitCost) || 0)
+      .input("QuantityOnHand", sql.Decimal(18,2), Number(d.QuantityOnHand) || 0)
+
+      .input("NameInOtherLanguage", sql.NVarChar, d.NameInOtherLanguage || "")
+      .input("ImageId", sql.UniqueIdentifier, imageId)
+      .input("IsActive", sql.Bit, d.IsActive ?? false)
+      .input("iskitchenPrint", sql.Bit, d.iskitchenPrint ?? false)
+     .input("KitchenType", sql.Int, Number(d.KitchenType) || 0)
+      .input("SubkitchenType", sql.Int, Number(d.SubkitchenType) || 0)
+      .input("isDiscountAllowed", sql.Bit, d.isDiscountAllowed ?? false)
+      .input("IsTaxAllowed", sql.Bit, d.IsTaxAllowed ?? false)
+      .input("IsStockDish", sql.Bit, d.IsStockDish ?? false)
+      .input("isFOC", sql.Bit, d.isFOC ?? false)
+      .input("isServiceCharge", sql.Bit, d.isServiceCharge ?? false)
+      .input("isFavourite", sql.Bit, d.isFavourite ?? false)
+      .input("isMultiPrice", sql.Bit, d.isMultiPrice ?? false)
+      .input("isOpenitem", sql.Bit, d.isOpenitem ?? false)
+
+      .query(`
+        INSERT INTO DishMaster (
+          DishId, DishCode, Name, ShortName, Description,
+          DishGroupId, CurrentCost, SordCode, UnitCost, QuantityOnHand,
+          NameInOtherLanguage, IsActive, iskitchenPrint,
+          isDiscountAllowed, IsTaxAllowed, IsStockDish,
+          isFOC, isServiceCharge, isFavourite, isMultiPrice, isOpenitem,ImageId,KitchenType,SubkitchenType
+        )
+        VALUES (
+          @DishId, @DishCode, @Name, @ShortName, @Description,
+          @DishGroupId, @CurrentCost, @SordCode, @UnitCost, @QuantityOnHand,
+          @NameInOtherLanguage, @IsActive, @iskitchenPrint,
+          @isDiscountAllowed, @IsTaxAllowed, @IsStockDish,
+          @isFOC, @isServiceCharge, @isFavourite, @isMultiPrice, @isOpenitem,@ImageId,@KitchenType,@SubkitchenType
+        )
+      `);
+
+      // ================== 🔥 SAVE MODIFIERS ==================
+
+       
+await pool.request()
+  .input("DishId", sql.UniqueIdentifier, dishId)
+  .query("DELETE FROM DishModifier WHERE DishId=@DishId");
+
+let mods = [];
+
+if (d.Modifiers) {
+  mods = typeof d.Modifiers === "string"
+    ? JSON.parse(d.Modifiers)
+    : d.Modifiers;
+}
+
+for (let m of mods) {
+  await pool.request()
+    .input("DishId", sql.UniqueIdentifier, dishId)
+    .input("ModifierId", sql.UniqueIdentifier, m)
+    .query(`
+      INSERT INTO DishModifier (DishId, ModifierId)
+      VALUES (@DishId, @ModifierId)
+    `);
+}
+
+// ================== 🔥 SAVE KITCHENS ==================
+await pool.request()
+  .input("DishId", sql.UniqueIdentifier, dishId)
+  .query("DELETE FROM DishKitchenType WHERE DishId=@DishId");
+
+let kitchens = [];
+
+if (d.KitchenTypes) {
+  kitchens = typeof d.KitchenTypes === "string"
+    ? JSON.parse(d.KitchenTypes)
+    : d.KitchenTypes;
+}
+
+for (let k of kitchens) {
+  await pool.request()
+    .input("DishId", sql.UniqueIdentifier, dishId)
+    .input("KitchenTypeCode", sql.Int, k.KitchenTypeCode)
+    .input("KitchenTypeName", sql.VarChar(100), k.KitchenTypeName)
+    .query(`
+      INSERT INTO DishKitchenType
+      (DishId, KitchenTypeCode, KitchenTypeName)
+      VALUES
+      (@DishId, @KitchenTypeCode, @KitchenTypeName)
+    `);
+}
+
+    res.send("Inserted ✅");
+
+  } catch (err) {
+    console.error("INSERT ERROR ❌", err);
+    res.status(500).send(err.message);
+  }
+});
+
+
+
+// ================= PUT =================
+app.put("/dish/:id", upload.single("image"), async (req, res) => {
+  try {
+    console.log("FILE 👉", req.file);
+    console.log("BODY 👉", req.body);
+
+    const pool = await poolPromise;
+    const d = req.body;
+
+     let imageId = null;
+    let imageName = null;
+
+if (req.file) {
+  imageId = uuidv4();
+ imageName = req.file.filename;
+  await pool.request()
+    .input("ImageId", sql.UniqueIdentifier, imageId)
+    .input("ImageName", sql.VarChar(100), req.file.filename)
+    .query(`
+      INSERT INTO ImageList (ImageId, ImageName)
+      VALUES (@ImageId, @ImageName)
+    `);
+}
+
+    await pool.request()
+      .input("DishId", sql.UniqueIdentifier, req.params.id)
+      .input("DishCode", sql.NVarChar, d.DishCode || "")
+      .input("Name", sql.NVarChar, d.Name || "")
+      .input("ShortName", sql.NVarChar, d.ShortName || "")
+      .input("Description", sql.NVarChar, d.Description || "")
+      .input("DishGroupId", sql.UniqueIdentifier, d.DishGroupId || null)
+      .input("ImageId", sql.UniqueIdentifier, imageId)
+      .input("CurrentCost", sql.Decimal(18,2), Number(d.CurrentCost) || 0)
+      .input("SordCode", sql.Int, Number(d.SordCode) || 0)
+      .input("UnitCost", sql.Decimal(18,2), Number(d.UnitCost) || 0)
+      .input("QuantityOnHand", sql.Decimal(18,2), Number(d.QuantityOnHand) || 0)
+
+      .input("IsActive", sql.Bit, d.IsActive ?? false)
+
+      .query(`
+        UPDATE DishMaster SET
+          DishCode=@DishCode,
+          Name=@Name,
+          ShortName=@ShortName,
+          Description=@Description,
+          DishGroupId=@DishGroupId,
+          CurrentCost=@CurrentCost,
+          SordCode=@SordCode,
+          UnitCost=@UnitCost,
+          QuantityOnHand=@QuantityOnHand,
+          IsActive=@IsActive,
+          ImageId = COALESCE(@ImageId, ImageId), 
+          ModifiedOn=GETDATE()
+        WHERE DishId=@DishId
+      `);
+
+
+
+    res.send("Updated ✅");
+
+  } catch (err) {
+    console.error("UPDATE ERROR ❌", err);
+    res.status(500).send(err.message);
+  }
+});
+
+// ================= DELETE =================
+app.delete("/dish/:id", async (req, res) => {
+  try {
+   
+    const pool = await poolPromise;
+
+    await pool.request()
+      .input("DishId", sql.UniqueIdentifier, req.params.id)
+      .query("DELETE FROM DishMaster WHERE DishId=@DishId");
+
+    res.send("Deleted ✅");
+
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+});
+
+// ================= GET DISH MODIFIER =================
+app.get("/dishmodifier/:id", async (req, res) => {
+  try {
+    const pool = await poolPromise;
+
+    const result = await pool.request()
+      .input("DishId", sql.UniqueIdentifier, req.params.id)
+      .query(`
+        SELECT ModifierId
+        FROM DishModifier
+        WHERE DishId=@DishId
+      `);
+
+    res.json(result.recordset);
+
+  } catch (err) {
+    console.log(err);
+    res.status(500).send("Error");
+  }
+});
+
+
+// ================= GET DISH KITCHEN =================
+app.get("/dishkitchen/:id", async (req, res) => {
+  try {
+    const pool = await poolPromise;
+
+    const result = await pool.request()
+      .input("DishId", sql.UniqueIdentifier, req.params.id)
+      .query(`
+        SELECT KitchenTypeCode
+        FROM DishKitchenType
+        WHERE DishId=@DishId
+      `);
+
+    res.json(result.recordset);
+
+  } catch (err) {
+    console.log(err);
+    res.status(500).send("Error");
+  }
+});
+/*=====================================================end dish
+/*==========================GET ALL MODIFIERS*/
+app.get("/modifiermaster", async (req, res) => {
+  try {
+    const pool = await poolPromise;
+
+    const result = await pool.request().query(`
+      SELECT *
+      FROM ModifierMaster
+      ORDER BY ModifierName
+    `);
+
+    res.json(result.recordset);
+
+  } catch (err) {
+    console.log(err);
+    res.status(500).send("Error");
+  }
+});
+/*=======================GET MODIFIER BY ID*/
+app.get("/modifiermaster/:id", async (req, res) => {
+  try {
+    const pool = await poolPromise;
+
+    const result = await pool.request()
+      .input("ModifierId", sql.UniqueIdentifier, req.params.id)
+      .query(`
+        SELECT *
+        FROM ModifierMaster
+        WHERE ModifierId=@ModifierId
+      `);
+
+    res.json(result.recordset[0]);
+
+  } catch (err) {
+    console.log(err);
+    res.status(500).send("Error");
+  }
+});
+/*----------------------CREATE / UPDATE MODIFIER ( MAIN API)*/
+app.post("/modifiermaster", async (req, res) => {
+  try {
+    const {
+      ModifierId,
+      ModifierName,
+      isActive
+    } = req.body;
+
+    const pool = await poolPromise;
+
+    let modId = ModifierId || uuidv4();
+
+    // Check exists
+    const exists = await pool.request()
+      .input("ModifierId", sql.UniqueIdentifier, modId)
+      .query(`
+        SELECT ModifierId
+        FROM ModifierMaster
+        WHERE ModifierId=@ModifierId
+      `);
+
+    if (exists.recordset.length > 0) {
+
+      // 🔄 UPDATE
+      await pool.request()
+        .input("ModifierId", sql.UniqueIdentifier, modId)
+        .input("ModifierName", sql.VarChar(100), ModifierName)
+        .input("isActive", sql.Bit, isActive ?? true)
+        .input("ModifiedOn", sql.DateTime, new Date())
+        .query(`
+          UPDATE ModifierMaster SET
+          ModifierName=@ModifierName,
+          isActive=@isActive,
+          ModifiedOn=@ModifiedOn
+          WHERE ModifierId=@ModifierId
+        `);
+
+    } else {
+
+      // 🆕 INSERT
+      await pool.request()
+        .input("ModifierId", sql.UniqueIdentifier, modId)
+        .input("ModifierName", sql.VarChar(100), ModifierName)
+        .input("isActive", sql.Bit, isActive ?? true)
+        .input("CreatedOn", sql.DateTime, new Date())
+        .query(`
+          INSERT INTO ModifierMaster
+          (ModifierId, ModifierName, isActive, CreatedOn)
+          VALUES
+          (@ModifierId, @ModifierName, @isActive, @CreatedOn)
+        `);
+    }
+
+    res.json({
+      message: "Modifier saved successfully",
+      ModifierId: modId
+    });
+
+  } catch (err) {
+    console.log(err);
+    res.status(500).send(err.message);
+  }
+});
+/*----------------------------DELETE MODIFIER*/
+app.delete("/modifiermaster/:id", async (req, res) => {
+  try {
+    const pool = await poolPromise;
+
+    // 🔥 CHECK USAGE BEFORE DELETE
+    const check = await pool.request()
+      .input("ModifierId", sql.UniqueIdentifier, req.params.id)
+      .query(`
+        SELECT * FROM CategoryModifier WHERE ModifierId=@ModifierId
+        UNION
+        SELECT * FROM DishGroupModifier WHERE ModifierId=@ModifierId
+        UNION
+        SELECT * FROM DishModifier WHERE ModifierId=@ModifierId
+      `);
+
+    if (check.recordset.length > 0) {
+      return res.status(400).json({
+        message: "Modifier is in use. Cannot delete."
+      });
+    }
+
+    await pool.request()
+      .input("ModifierId", sql.UniqueIdentifier, req.params.id)
+      .query(`
+        DELETE FROM ModifierMaster
+        WHERE ModifierId=@ModifierId
+      `);
+
+    res.json({ message: "Modifier deleted successfully" });
+
+  } catch (err) {
+    console.log(err);
+    res.status(500).send("Error");
+  }
+});
+/* ------------------- SERVER ------------------- */
+const PORT = 3000;
+app.listen(PORT, () => {
+  console.log("Server running on port " + PORT);
+});
