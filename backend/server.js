@@ -238,10 +238,11 @@ app.get("/category", async (req, res) => {
     const { CategoryCode } = req.query;
     const pool = await poolPromise;
     let query = `SELECT 
-C.*,
-I.ImageName
-FROM CategoryMaster C
-LEFT JOIN ImageList I ON C.ImageId = I.ImageId`;
+                  C.*,
+                  (SELECT I.ImageData
+                  from ImageList I
+                  where  C.ImageId = I.ImageId) ImageData
+                  FROM CategoryMaster C;`;
 
     if (CategoryCode) query += " WHERE CategoryCode = @CategoryCode";
     const request = pool.request();
@@ -299,11 +300,13 @@ if (!catId || catId === "") {
     if (req.file) {
       imageId = uuidv4();
       imageName = req.file.filename;
+      const imageBuffer = fs.readFileSync(req.file.path);
       await pool
         .request()
         .input("ImageId", sql.UniqueIdentifier, imageId)
         .input("ImageName", sql.VarChar(100), imageName)
-        .query("INSERT INTO ImageList (ImageId, ImageName) VALUES (@ImageId, @ImageName)");
+         .input("ImageData", sql.VarBinary(sql.MAX), imageBuffer)
+        .query("INSERT INTO ImageList (ImageId, ImageName,ImageData) VALUES (@ImageId, @ImageName,@ImageData)");
     }
 
     // Check if updating or creating
@@ -648,7 +651,6 @@ app.get("/dishgroup", async (req, res) => {
         C.DishGroupCode,
         C.DishGroupName,
         C.ShortName,
-
         ISNULL(C.isActive, 0) AS isActive,
         ISNULL(C.isDiscountAllowed, 0) AS isDiscountAllowed,
         ISNULL(C.isTaxAllowed, 0) AS isTaxAllowed,
@@ -656,18 +658,15 @@ app.get("/dishgroup", async (req, res) => {
         ISNULL(C.isServiceCharge, 0) AS isServiceCharge,
         ISNULL(C.isMemberSalesAllowed, 0) AS isMemberSalesAllowed,
         ISNULL(C.ShowModifierTabOrder, 0) AS ShowModifierTabOrder,
-
         ISNULL(C.SortCode, 0) AS SortCode,
         ISNULL(C.KitchenSortCode, 0) AS KitchenSortCode,
-
         C.CategoryId,
         C.BackColor,
         C.ForeColor,
-
-        I.ImageName
-
+         (SELECT I.ImageData
+                  from ImageList I
+                  where  C.ImageId = I.ImageId) ImageData
       FROM DishGroupMaster C
-      LEFT JOIN ImageList I ON C.ImageId = I.ImageId
       ORDER BY C.DishGroupCode
     `);
 
@@ -729,13 +728,14 @@ app.post("/dishgroup", upload.single("image"), async (req, res) => {
 
 if (req.file) {
   imageId = uuidv4();
-
+const imageBuffer = fs.readFileSync(req.file.path);
   await pool.request()
     .input("ImageId", sql.UniqueIdentifier, imageId)
     .input("ImageName", sql.VarChar(100), req.file.filename)
+    .input("ImageData", sql.VarBinary(sql.MAX), imageBuffer)
     .query(`
-      INSERT INTO ImageList (ImageId, ImageName)
-      VALUES (@ImageId, @ImageName)
+      INSERT INTO ImageList (ImageId, ImageName,ImageData)
+      VALUES (@ImageId, @ImageName,@ImageData)
     `);
 }
 
@@ -1023,10 +1023,10 @@ app.post("/dishgroupkitchen", async (req, res) => {
 app.get("/dish", async (req, res) => {
   try {
     const pool = await poolPromise;
-    const result = await pool.request().query(`SELECT D.*, I.ImageName
+    const result = await pool.request().query(`SELECT D.*,  (SELECT I.ImageData
+                                                              from ImageList I
+                                                              where  D.ImageId = I.ImageId) ImageData
                                                FROM DishMaster D
-                                                LEFT JOIN ImageList I 
-                                                ON D.ImageId = I.ImageId
                                                 ORDER BY D.CreatedOn DESC`);
     res.json(result.recordset);
   } catch (err) {
@@ -1050,12 +1050,15 @@ app.post("/dish", upload.single("image"), async (req, res) => {
 if (req.file) {
   imageId = uuidv4();
  imageName = req.file.filename;
+   const imageBuffer = fs.readFileSync(req.file.path); // 🔥 ADD THIS
+
   await pool.request()
     .input("ImageId", sql.UniqueIdentifier, imageId)
     .input("ImageName", sql.VarChar(100), req.file.filename)
+     .input("ImageData", sql.VarBinary(sql.MAX), imageBuffer)
     .query(`
-      INSERT INTO ImageList (ImageId, ImageName)
-      VALUES (@ImageId, @ImageName)
+      INSERT INTO ImageList (ImageId, ImageName,ImageData)
+      VALUES (@ImageId, @ImageName,@ImageData)
     `);
 }
 
@@ -1183,12 +1186,14 @@ app.put("/dish/:id", upload.single("image"), async (req, res) => {
 if (req.file) {
   imageId = uuidv4();
  imageName = req.file.filename;
+ const imageBuffer = fs.readFileSync(req.file.path);
   await pool.request()
     .input("ImageId", sql.UniqueIdentifier, imageId)
     .input("ImageName", sql.VarChar(100), req.file.filename)
+      .input("ImageData", sql.VarBinary(sql.MAX), imageBuffer)
     .query(`
-      INSERT INTO ImageList (ImageId, ImageName)
-      VALUES (@ImageId, @ImageName)
+      INSERT INTO ImageList (ImageId, ImageName,ImageData)
+      VALUES (@ImageId, @ImageName,@ImageData)
     `);
 }
 
