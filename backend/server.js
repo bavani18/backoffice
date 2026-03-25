@@ -1295,10 +1295,27 @@ app.get("/dishkitchen/:id", async (req, res) => {
 });
 /*=====================================================end dish
 /*==========================GET ALL MODIFIERS*/
+app.get("/modifiermaster", async (req, res) => {
+  try {
+    const pool = await poolPromise;
+
+    const result = await pool.request().query(`
+      SELECT  *
+      FROM ModifierMaster
+      ORDER BY ModifierName
+    `);
+
+    res.json(result.recordset);
+
+  } catch (err) {
+    console.error("GET ERROR:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+//modifier post
 app.post("/modifiermaster", async (req, res) => {
   try {
     const {
-      ModifierId,
       ModifierCode,
       ModifierName,
       ConflictId,
@@ -1310,84 +1327,98 @@ app.post("/modifiermaster", async (req, res) => {
       isOpenModifier
     } = req.body;
 
-    const pool = await poolPromise;
-    let modId = ModifierId || uuidv4();
-
-    const exists = await pool.request()
-      .input("ModifierId", sql.UniqueIdentifier, modId)
-      .query(`SELECT ModifierId FROM ModifierMaster WHERE ModifierId=@ModifierId`);
-
-    if (exists.recordset.length > 0) {
-
-      // 🔄 UPDATE
-      await pool.request()
-        .input("ModifierId", sql.UniqueIdentifier, modId)
-        .input("ModifierCode", sql.VarChar(50), ModifierCode)
-        .input("ModifierName", sql.NVarChar(100), ModifierName)
-        .input("ConflictId", sql.UniqueIdentifier, ConflictId || null)
-        .input("isActive", sql.Bit, isActive ?? true)
-        .input("SortCode", sql.Int, SortCode || 0)
-        .input("isPriceAffect", sql.Bit, isPriceAffect ?? false)
-        .input("isDishPrice", sql.Bit, isDishPrice ?? false)
-        .input("DishCost", sql.Decimal(18,2), DishCost || 0)
-        .input("isOpenModifier", sql.Bit, isOpenModifier ?? false)
-        .input("ModifyOn", sql.DateTime, new Date())
-        .query(`
-          UPDATE ModifierMaster SET
-            ModifierCode=@ModifierCode,
-            ModifierName=@ModifierName,
-            ConflictId=@ConflictId,
-            isActive=@isActive,
-            SortCode=@SortCode,
-            isPriceAffect=@isPriceAffect,
-            isDishPrice=@isDishPrice,
-            DishCost=@DishCost,
-            isOpenModifier=@isOpenModifier,
-            ModifyOn=@ModifyOn
-          WHERE ModifierId=@ModifierId
-        `);
-
-    } else {
-
-      // 🆕 INSERT
-      await pool.request()
-        .input("ModifierId", sql.UniqueIdentifier, modId)
-        .input("ModifierCode", sql.VarChar(50), ModifierCode)
-        .input("ModifierName", sql.NVarChar(100), ModifierName)
-        .input("ConflictId", sql.UniqueIdentifier, ConflictId || null)
-        .input("isActive", sql.Bit, isActive ?? true)
-        .input("SortCode", sql.Int, SortCode || 0)
-        .input("isPriceAffect", sql.Bit, isPriceAffect ?? false)
-        .input("isDishPrice", sql.Bit, isDishPrice ?? false)
-        .input("DishCost", sql.Decimal(18,2), DishCost || 0)
-        .input("isOpenModifier", sql.Bit, isOpenModifier ?? false)
-        .input("CreatedOn", sql.DateTime, new Date())
-        .query(`
-          INSERT INTO ModifierMaster
-          (ModifierId, ModifierCode, ModifierName, ConflictId, isActive, SortCode,
-           isPriceAffect, isDishPrice, DishCost, isOpenModifier, CreatedOn)
-          VALUES
-          (@ModifierId, @ModifierCode, @ModifierName, @ConflictId, @isActive, @SortCode,
-           @isPriceAffect, @isDishPrice, @DishCost, @isOpenModifier, @CreatedOn)
-        `);
+    if (!ModifierName) {
+      return res.status(400).json({ error: "ModifierName is required" });
     }
 
-    res.json({
-      message: "Modifier saved successfully",
-      ModifierId: modId
-    });
+    const pool = await poolPromise;
+    const modId = uuidv4();
+
+    await pool.request()
+      .input("ModifierId", sql.UniqueIdentifier, modId)
+      .input("ModifierCode", sql.VarChar(50), ModifierCode)
+      .input("ModifierName", sql.NVarChar(100), ModifierName)
+      .input("ConflictId", sql.UniqueIdentifier, ConflictId || null)
+      .input("isActive", sql.Bit, isActive ?? true)
+      .input("SortCode", sql.Int, SortCode || 0)
+      .input("isPriceAffect", sql.Bit, isPriceAffect ?? false)
+      .input("isDishPrice", sql.Bit, isDishPrice ?? false)
+      .input("DishCost", sql.Decimal(18,2), Number(DishCost) || 0)
+      .input("isOpenModifier", sql.Bit, isOpenModifier ?? false)
+      .input("CreatedOn", sql.DateTime, new Date())
+      .query(`
+        INSERT INTO ModifierMaster
+        (ModifierId, ModifierCode, ModifierName, ConflictId, isActive, SortCode,
+         isPriceAffect, isDishPrice, DishCost, isOpenModifier, CreatedOn)
+        VALUES
+        (@ModifierId, @ModifierCode, @ModifierName, @ConflictId, @isActive, @SortCode,
+         @isPriceAffect, @isDishPrice, @DishCost, @isOpenModifier, @CreatedOn)
+      `);
+
+    res.json({ message: "Modifier created", ModifierId: modId });
 
   } catch (err) {
-    console.log(err);
-    res.status(500).send(err.message);
+    console.error("POST ERROR:", err);
+    res.status(500).json({ error: err.message });
   }
 });
-/*----------------------------DELETE MODIFIER*/
+//put
+app.put("/modifiermaster/:id", async (req, res) => {
+  try {
+    const pool = await poolPromise;
+    const { id } = req.params;
+
+    const {
+      ModifierCode,
+      ModifierName,
+      ConflictId,
+      isActive,
+      SortCode,
+      isPriceAffect,
+      isDishPrice,
+      DishCost,
+      isOpenModifier
+    } = req.body;
+
+    await pool.request()
+      .input("ModifierId", sql.UniqueIdentifier, id)
+      .input("ModifierCode", sql.VarChar(50), ModifierCode)
+      .input("ModifierName", sql.NVarChar(100), ModifierName)
+      .input("ConflictId", sql.UniqueIdentifier, ConflictId || null)
+      .input("isActive", sql.Bit, isActive ?? true)
+      .input("SortCode", sql.Int, SortCode || 0)
+      .input("isPriceAffect", sql.Bit, isPriceAffect ?? false)
+      .input("isDishPrice", sql.Bit, isDishPrice ?? false)
+      .input("DishCost", sql.Decimal(18,2), Number(DishCost) || 0)
+      .input("isOpenModifier", sql.Bit, isOpenModifier ?? false)
+      .input("ModifyOn", sql.DateTime, new Date())
+      .query(`
+        UPDATE ModifierMaster SET
+          ModifierCode=@ModifierCode,
+          ModifierName=@ModifierName,
+          ConflictId=@ConflictId,
+          isActive=@isActive,
+          SortCode=@SortCode,
+          isPriceAffect=@isPriceAffect,
+          isDishPrice=@isDishPrice,
+          DishCost=@DishCost,
+          isOpenModifier=@isOpenModifier,
+          ModifyOn=@ModifyOn
+        WHERE ModifierId=@ModifierId
+      `);
+
+    res.json({ message: "Modifier updated" });
+
+  } catch (err) {
+    console.error("PUT ERROR:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+//delete
 app.delete("/modifiermaster/:id", async (req, res) => {
   try {
     const pool = await poolPromise;
 
-    // 🔥 CHECK USAGE BEFORE DELETE
     const check = await pool.request()
       .input("ModifierId", sql.UniqueIdentifier, req.params.id)
       .query(`
@@ -1411,13 +1442,14 @@ app.delete("/modifiermaster/:id", async (req, res) => {
         WHERE ModifierId=@ModifierId
       `);
 
-    res.json({ message: "Modifier deleted successfully" });
+    res.json({ message: "Modifier deleted" });
 
   } catch (err) {
-    console.log(err);
-    res.status(500).send("Error");
+    console.error("DELETE ERROR:", err);
+    res.status(500).json({ error: err.message });
   }
 });
+//=======================================end modifier
 /* ------------------- SERVER ------------------- */
 app.get("/", (req, res) => {
   res.send("Backend is running 🚀");
