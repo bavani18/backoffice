@@ -2,6 +2,8 @@ import { useState, useRef, useEffect } from "react";
 import axios from "axios";
 import "./About.css";
 
+import { BASE_URL } from "../config/api";
+
 function About() {
 
 const [entries,setEntries] = useState([]);
@@ -67,7 +69,7 @@ return ()=>clearTimeout(timer);
 const fetchCategory = async () => {
 
    try {
-    const res = await axios.get("http://localhost:3000/category");
+    const res = await axios.get(`${BASE_URL}/category`);
     setEntries(res.data);
   } catch (err) {
     console.error("Category load error:", err);
@@ -79,7 +81,7 @@ const fetchModifier = async () => {
 
   try {
 
-    const res = await axios.get("http://localhost:3000/modifier");
+    const res = await axios.get(`${BASE_URL}/modifier`);
     setModifiers(res.data);
 
   } catch (err) {
@@ -94,7 +96,7 @@ const fetchKitchen = async () => {
 
 try{
 
-const res = await axios.get("http://localhost:3000/kitchen");
+const res = await axios.get(`${BASE_URL}/kitchen`);
 setKitchens(res.data);
 
 }catch(err){
@@ -129,7 +131,7 @@ const handleEdit = (index)=>{
 const row = entries[index];
 setForm({...row});
 if(row.ImageName){
-setImage("http://localhost:3000/images/Dish/" + row.ImageName);
+setImage(`${BASE_URL}/images/Dish/`+ row.ImageName);
 }// image load ஆகும்
 
 setBgColor(row.BackColor || "#000000");
@@ -138,7 +140,7 @@ setEditIndex(index);
 setShowModal(true);
 
 /* ADD THIS */
-axios.get("http://localhost:3000/categorykitchen/" + row.CategoryId)
+axios.get(`${BASE_URL}/categorykitchen/`+ row.CategoryId)
 .then(res=>{
 const ids = res.data.map(k => Number(k.KitchenTypeCode));
 setSelectedKitchens(ids);
@@ -146,7 +148,7 @@ setSelectedKitchens(ids);
 
 
 
-axios.get("http://localhost:3000/categorymodifier/" + row.CategoryId)
+axios.get(`${BASE_URL}/categorymodifier/` + row.CategoryId)
 .then(res=>{
 const ids = res.data.map(m => m.ModifierId);
 setSelectedModifiers(ids);
@@ -201,7 +203,7 @@ data.append("image",image);
 }
 
 await axios.post(
-  "http://localhost:3000/category",
+  `${BASE_URL}/category`,
   data,
   {
     headers: {
@@ -248,7 +250,7 @@ data.append("image",image);
 data.append("CreatedBy","00000000-0000-0000-0000-000000000001");
 
 await axios.post(
-"http://localhost:3000/category",
+`${BASE_URL}/category`,
 data,
 {
 headers:{
@@ -627,7 +629,7 @@ setSelectedModifiers(prev =>
 );
 
 // database update
-await axios.post("http://localhost:3000/categorymodifier",{
+await axios.post(`${BASE_URL}/categorymodifier`,{
   CategoryId: form.CategoryId,
   ModifierId: m.ModifierId,
   checked: checked
@@ -690,7 +692,7 @@ alert("Please save category first");
 return;
 }
 
-await axios.post("http://localhost:3000/categorykitchen", {
+await axios.post(`${BASE_URL}/categorykitchen`, {
 CategoryId: form.CategoryId,
 KitchenTypeCode: k.KitchenTypeCode,
 KitchenTypeName: k.KitchenTypeName,

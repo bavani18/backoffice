@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import "./Contact.css";
-
+import { BASE_URL } from "../config/api";
 function Contact() {
   const [entries, setEntries] = useState([]);
   const [showModal, setShowModal] = useState(false);
@@ -21,7 +21,7 @@ function Contact() {
 
   const fetchKitchen = async () => {
     try {
-      const res = await axios.get("http://localhost:3000/kitchen");
+      const res = await axios.get(`${BASE_URL}/kitchen`);
       const data = res.data.map((item) => ({
         id: item.KitchenTypeId,
         kitchen_code: item.KitchenTypeCode,
@@ -36,7 +36,7 @@ function Contact() {
 
   const fetchNextCode = async () => {
     try {
-      const res = await axios.get("http://localhost:3000/kitchen/nextcode");
+      const res = await axios.get(`${BASE_URL}/kitchen/nextcode`);
       setForm({
         kitchen_code: res.data.NextNumber,
         kitchen_name: "",
@@ -68,7 +68,7 @@ function Contact() {
     if (!window.confirm("Delete this kitchen?")) return;
 
     try {
-      await axios.delete(`http://localhost:3000/kitchen/${id}`);
+      await axios.delete(`${BASE_URL}/kitchen/${id}`);
       fetchKitchen();
     } catch (err) {
       alert("Delete failed");
@@ -93,9 +93,9 @@ function Contact() {
       };
 
       if (editingId) {
-        await axios.put(`http://localhost:3000/kitchen/${editingId}`, payload);
+        await axios.put(`${BASE_URL}/kitchen/${editingId}`, payload);
       } else {
-        await axios.post("http://localhost:3000/kitchen", payload);
+        await axios.post(`${BASE_URL}/kitchen`, payload);
       }
 
       setForm({

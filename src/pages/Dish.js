@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import axios from "axios";
 import "./Dish.css";
+
+import { BASE_URL } from "../config/api";
  
 function Dish() {
  
@@ -38,7 +40,7 @@ SubkitchenType: "",
   const fetchDish = async () => {
   try{
   
-  const res = await axios.get("http://localhost:3000/dish");
+  const res = await axios.get(`${BASE_URL}/dish`);
   
   setEntries(res.data);
   
@@ -53,10 +55,10 @@ SubkitchenType: "",
 useEffect(()=>{
   fetchDish();
 
-  axios.get("http://localhost:3000/modifier")
+  axios.get(`${BASE_URL}/modifier`)
     .then(res => setdishModifiers(res.data));
 
-  axios.get("http://localhost:3000/kitchen")
+  axios.get(`${BASE_URL}/kitchen`)
     .then(res => setdishKitchens(res.data));
 
 },[]);
@@ -139,7 +141,7 @@ const [selecteddishKitchens, setSelecteddishKitchens] = useState([]);
     console.log("FORM DATA READY ✅");
    if (editIndex !== null && dish.DishId) {
   await axios.put(
-    `http://localhost:3000/dish/${dish.DishId}`,
+    `${BASE_URL}/dish/${dish.DishId}`,
     formData,   // ✅ IMPORTANT
     { headers: { "Content-Type": "multipart/form-data" } }
   );
@@ -148,7 +150,7 @@ const [selecteddishKitchens, setSelecteddishKitchens] = useState([]);
 
 } else {
   await axios.post(
-    "http://localhost:3000/dish",
+    `${BASE_URL}/dish`,
     formData,   // ✅ IMPORTANT
     { headers: { "Content-Type": "multipart/form-data" } }
   );
@@ -189,14 +191,14 @@ const handleEdit = (index) => {
   setCategoryImage(null); // reset new upload
 
     // 🔥 ADD THIS (MODIFIER GET)
-  axios.get(`http://localhost:3000/dishmodifier/${data.DishId}`)
+  axios.get(`${BASE_URL}/dishmodifier/${data.DishId}`)
     .then(res => {
       const ids = res.data.map(x => x.ModifierId);
       setSelecteddishModifiers(ids);
     });
 
   // 🔥 ADD THIS (KITCHEN GET)
-  axios.get(`http://localhost:3000/dishkitchen/${data.DishId}`)
+  axios.get(`${BASE_URL}/dishkitchen/${data.DishId}`)
     .then(res => {
       const kitchens = res.data.map(x => ({
         KitchenTypeCode: x.KitchenTypeCode
@@ -410,7 +412,7 @@ const handleEdit = (index) => {
                                   />
                                 ) : existingImage ? (
                                  <img
-                                    src={`http://localhost:3000/images/Dish/${existingImage}`}
+                                    src={`${BASE_URL}/images/Dish/${existingImage}`}
                                     style={{ width: "100%", height: "100%", objectFit: "cover" }}
                                 />
                               ) : null}
@@ -453,7 +455,7 @@ const handleEdit = (index) => {
              ) : existingImage ? (
             <>
           <img
-        src={`http://localhost:3000/images/Dish/${existingImage}`}
+        src={`${BASE_URL}/images/Dish/${existingImage}`}
         style={{ width: "100%", height: "100%", objectFit: "cover" }}
       />
     {displayName && (

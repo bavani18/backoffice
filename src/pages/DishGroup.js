@@ -2,6 +2,8 @@ import { useState, useRef, useEffect } from "react";
 import axios from "axios";
 import "./DishGroup.css";
 
+import { BASE_URL } from "../config/api";
+
 function DishGroup() {
 
 const [entries,setEntries] = useState([]);
@@ -51,7 +53,7 @@ isMemberSalesAllowed:"No"
 const fetchDishGroup = async () => {
 try{
 
-const res = await axios.get("http://localhost:3000/dishgroup");
+const res = await axios.get(`${BASE_URL}/dishgroup`);
 
 setEntries(res.data);
 
@@ -68,14 +70,14 @@ useEffect(()=>{
 fetchDishGroup();
 
 // 🔥 Modifier list
-axios.get("http://localhost:3000/modifier")
+axios.get(`${BASE_URL}/modifier`)
 .then(res => setModifiers(res.data));
 
 // 🔥 Kitchen list
-axios.get("http://localhost:3000/kitchen")
+axios.get(`${BASE_URL}/kitchen`)
 .then(res => setKitchens(res.data));
 
-axios.get("http://localhost:3000/category")
+axios.get(`${BASE_URL}/category`)
 .then(res => setCategoryList(res.data));
 
 },[]);
@@ -131,7 +133,7 @@ const handleSubmit = async (e) => {
     ));
 
     // 🔥 FINAL API CALL
-    await axios.post("http://localhost:3000/dishgroup", formData, {
+    await axios.post(`${BASE_URL}/dishgroup`, formData, {
       headers: { "Content-Type": "multipart/form-data" }
     });
 
@@ -172,20 +174,20 @@ const handleEdit = (index) => {
     // 🔥 ADD THIS
  setImage(
   row.ImageName
-    ? `http://localhost:3000/images/Dish/${row.ImageName}`
+    ? `${BASE_URL}/images/Dish/${row.ImageName}`
     : null
 );
   setBgColor(row.BackColor || "#2e7d32");
   setTextColor(row.ForeColor || "#ffffff");
 
   // 🔥 modifier selected load
-axios.get(`http://localhost:3000/dishgroupmodifier/${row.DishGroupId}`)
+axios.get(`${BASE_URL}/dishgroupmodifier/${row.DishGroupId}`)
 .then(res => {
   setSelectedModifiers(res.data.map(x => x.ModifierId));
 });
 
 // 🔥 kitchen selected load
-axios.get(`http://localhost:3000/dishgroupkitchen/${row.DishGroupId}`)
+axios.get(`${BASE_URL}/dishgroupkitchen/${row.DishGroupId}`)
 .then(res => {
   setSelectedKitchens(
   res.data.map(x => Number(x.KitchenTypeCode))
@@ -352,7 +354,7 @@ value={
 <button
 type="button"
 onClick={async () => {
-  const res = await axios.get("http://localhost:3000/category");
+  const res = await axios.get(`${BASE_URL}/category`);
   setCategoryList(res.data);
   setShowCategoryModal(true);
 }}

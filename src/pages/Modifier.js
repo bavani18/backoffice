@@ -2,9 +2,10 @@ import React, { useState } from "react";
 import axios from "axios";
 import { useEffect } from "react";
 import "./Modifier.css";
+import { BASE_URL } from "../config/api";
 
 function Modifier() {
-const API = "http://localhost:3000";
+const API = `${BASE_URL}`;
   const [showModal, setShowModal] = useState(false);
   const [modifierList, setModifierList] = useState([]);
   const [editIndex, setEditIndex] = useState(null);
@@ -24,7 +25,7 @@ useEffect(() => {
 
 const loadModifiers = async () => {
   try {
-    const res = await axios.get(`${API}/modifier`);
+    const res = await axios.get(`${API}/modifiermaster`);
     setModifierList(res.data);
   } catch (err) {
     console.error("LOAD ERROR", err);
@@ -42,12 +43,12 @@ const loadModifiers = async () => {
  const handleSave = async () => {
   try {
     if (editIndex !== null) {
-      await axios.put(`${API}/modifier/${modifier.ModifierCode}`, modifier);
+      await axios.put(`${API}/modifiermaster/${modifier.ModifierId}`, modifier);
     } else {
-      await axios.post(`${API}/modifier`, modifier);
+      await axios.post(`${API}/modifiermaster`, modifier);
     }
 
-    loadModifiers(); // refresh from DB
+    loadModifiers();
 
     setShowModal(false);
     setEditIndex(null);
@@ -67,11 +68,21 @@ const loadModifiers = async () => {
   }
 };
 
+const handleDelete = async (id) => {
+  try {
+    await axios.delete(`${API}/modifiermaster/${id}`);
+    loadModifiers();
+  } catch (err) {
+    console.error("DELETE ERROR", err);
+  }
+};
+
   const handleEdit = (index) => {
-    const item = modifierList[index];
-    setModifier(modifierList[index]);
-      setModifier({
-    ModifierCode: item.ModifierId || "",
+  const item = modifierList[index];
+
+  setModifier({
+    ModifierId: item.ModifierId,
+    ModifierCode: item.ModifierCode || "",
     ModifierName: item.ModifierName || "",
     ConflictId: item.ConflictId || "",
     isActive: item.isActive ?? true,
@@ -80,9 +91,9 @@ const loadModifiers = async () => {
     isOpenModifier: item.isOpenModifier ?? false,
   });
 
-    setEditIndex(index);
-    setShowModal(true);
-  };
+  setEditIndex(index);
+  setShowModal(true);
+};
 
   return (
     <div className="modifier-container">
@@ -119,17 +130,28 @@ const loadModifiers = async () => {
 
             modifierList.map((item, index) => (
 
-              <tr key={index} onClick={() => handleEdit(index)} style={{ cursor: "pointer" }}>
+             <tr key={index} style={{ cursor: "pointer" }}>
 
-                <td>{item.ModifierCode}</td>
-                <td>{item.ModifierName}</td>
-                <td>{item.ConflictId}</td>
-                <td>{item.isActive ? "Active" : "Inactive"}</td>
-                <td>{item.SortCode}</td>
-                <td>{item.isPriceAffect ? "Yes" : "No"}</td>
-                <td>{item.isOpenModifier ? "Yes" : "No"}</td>
+                  <td onClick={() => handleEdit(index)}>{item.ModifierCode}</td>
+                  <td onClick={() => handleEdit(index)}>{item.ModifierName}</td>
+                  <td onClick={() => handleEdit(index)}>{item.ConflictId}</td>
+                  <td onClick={() => handleEdit(index)}>{item.isActive ? "Active" : "Inactive"}</td>
+                  <td onClick={() => handleEdit(index)}>{item.SortCode}</td>
+                  <td onClick={() => handleEdit(index)}>{item.isPriceAffect ? "Yes" : "No"}</td>
+                  <td onClick={() => handleEdit(index)}>{item.isOpenModifier ? "Yes" : "No"}</td>
+                    
+                     <td>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation(); // 🔥 VERY IMPORTANT
+                            handleDelete(item.ModifierId);
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </td>
 
-              </tr>
+                    </tr>
 
             ))
 
