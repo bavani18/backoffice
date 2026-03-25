@@ -1335,12 +1335,15 @@ app.post("/modifiermaster", async (req, res) => {
     const modId = uuidv4();
 
     await pool.request()
-      .input("ModifierId", sql.UniqueIdentifier, modId)
-      .input("ModifierCode", sql.VarChar(50), ModifierCode)
-      .input("ModifierName", sql.NVarChar(100), ModifierName)
-      .input("ConflictId", sql.UniqueIdentifier, ConflictId || null)
+      .input("ModifierCode", sql.VarChar(50), ModifierCode || "")
+      .input("ModifierName", sql.NVarChar(100), ModifierName || "")
+      .input(
+        "ConflictId",
+        sql.UniqueIdentifier,
+        ConflictId && ConflictId !== "" ? ConflictId : null
+      )
       .input("isActive", sql.Bit, isActive ?? true)
-      .input("SortCode", sql.Int, SortCode || 0)
+      .input("SortCode", sql.Int, Number(SortCode) || 0)
       .input("isPriceAffect", sql.Bit, isPriceAffect ?? false)
       .input("isDishPrice", sql.Bit, isDishPrice ?? false)
       .input("DishCost", sql.Decimal(18,2), Number(DishCost) || 0)
@@ -1381,12 +1384,15 @@ app.put("/modifiermaster/:id", async (req, res) => {
     } = req.body;
 
     await pool.request()
-      .input("ModifierId", sql.UniqueIdentifier, id)
-      .input("ModifierCode", sql.VarChar(50), ModifierCode)
-      .input("ModifierName", sql.NVarChar(100), ModifierName)
-      .input("ConflictId", sql.UniqueIdentifier, ConflictId || null)
+      .input("ModifierCode", sql.VarChar(50), ModifierCode || "")
+      .input("ModifierName", sql.NVarChar(100), ModifierName || "")
+      .input(
+        "ConflictId",
+        sql.UniqueIdentifier,
+        ConflictId && ConflictId !== "" ? ConflictId : null
+      )
       .input("isActive", sql.Bit, isActive ?? true)
-      .input("SortCode", sql.Int, SortCode || 0)
+      .input("SortCode", sql.Int, Number(SortCode) || 0)
       .input("isPriceAffect", sql.Bit, isPriceAffect ?? false)
       .input("isDishPrice", sql.Bit, isDishPrice ?? false)
       .input("DishCost", sql.Decimal(18,2), Number(DishCost) || 0)
