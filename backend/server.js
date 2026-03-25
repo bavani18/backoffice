@@ -1335,6 +1335,7 @@ app.post("/modifiermaster", async (req, res) => {
     const modId = uuidv4();
 
     await pool.request()
+      .input("ModifierId", sql.UniqueIdentifier, modId) 
       .input("ModifierCode", sql.VarChar(50), ModifierCode || "")
       .input("ModifierName", sql.NVarChar(100), ModifierName || "")
       .input(
@@ -1371,6 +1372,11 @@ app.put("/modifiermaster/:id", async (req, res) => {
     const pool = await poolPromise;
     const { id } = req.params;
 
+     //  validation
+    if (!id) {
+      return res.status(400).json({ error: "ModifierId missing" });
+    }
+
     const {
       ModifierCode,
       ModifierName,
@@ -1384,6 +1390,7 @@ app.put("/modifiermaster/:id", async (req, res) => {
     } = req.body;
 
     await pool.request()
+    .input("ModifierId", sql.UniqueIdentifier, id)
       .input("ModifierCode", sql.VarChar(50), ModifierCode || "")
       .input("ModifierName", sql.NVarChar(100), ModifierName || "")
       .input(
