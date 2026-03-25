@@ -478,6 +478,7 @@ ref={fileInputRef}
 style={{display:"none"}}
 onChange={(e)=>{
 if(e.target.files && e.target.files[0]){
+  console.log("FILE:", e.target.files[0]);
  setImage(e.target.files[0]);
 }
 }}
