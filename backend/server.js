@@ -1303,60 +1303,55 @@ app.get("/modifiermaster", async (req, res) => {
   }
 });
 /*=======================GET MODIFIER BY ID*/
-app.get("/modifiermaster/:id", async (req, res) => {
-  try {
-    const pool = await poolPromise;
-
-    const result = await pool.request()
-      .input("ModifierId", sql.UniqueIdentifier, req.params.id)
-      .query(`
-        SELECT *
-        FROM ModifierMaster
-        WHERE ModifierId=@ModifierId
-      `);
-
-    res.json(result.recordset[0]);
-
-  } catch (err) {
-    console.log(err);
-    res.status(500).send("Error");
-  }
-});
-/*----------------------CREATE / UPDATE MODIFIER ( MAIN API)*/
 app.post("/modifiermaster", async (req, res) => {
   try {
     const {
       ModifierId,
+      ModifierCode,
       ModifierName,
-      isActive
+      ConflictId,
+      isActive,
+      SortCode,
+      isPriceAffect,
+      isDishPrice,
+      DishCost,
+      isOpenModifier
     } = req.body;
 
     const pool = await poolPromise;
-
     let modId = ModifierId || uuidv4();
 
-    // Check exists
     const exists = await pool.request()
       .input("ModifierId", sql.UniqueIdentifier, modId)
-      .query(`
-        SELECT ModifierId
-        FROM ModifierMaster
-        WHERE ModifierId=@ModifierId
-      `);
+      .query(`SELECT ModifierId FROM ModifierMaster WHERE ModifierId=@ModifierId`);
 
     if (exists.recordset.length > 0) {
 
       // 🔄 UPDATE
       await pool.request()
         .input("ModifierId", sql.UniqueIdentifier, modId)
-        .input("ModifierName", sql.VarChar(100), ModifierName)
+        .input("ModifierCode", sql.VarChar(50), ModifierCode)
+        .input("ModifierName", sql.NVarChar(100), ModifierName)
+        .input("ConflictId", sql.UniqueIdentifier, ConflictId || null)
         .input("isActive", sql.Bit, isActive ?? true)
-        .input("ModifiedOn", sql.DateTime, new Date())
+        .input("SortCode", sql.Int, SortCode || 0)
+        .input("isPriceAffect", sql.Bit, isPriceAffect ?? false)
+        .input("isDishPrice", sql.Bit, isDishPrice ?? false)
+        .input("DishCost", sql.Decimal(18,2), DishCost || 0)
+        .input("isOpenModifier", sql.Bit, isOpenModifier ?? false)
+        .input("ModifyOn", sql.DateTime, new Date())
         .query(`
           UPDATE ModifierMaster SET
-          ModifierName=@ModifierName,
-          isActive=@isActive,
-          ModifiedOn=@ModifiedOn
+            ModifierCode=@ModifierCode,
+            ModifierName=@ModifierName,
+            ConflictId=@ConflictId,
+            isActive=@isActive,
+            SortCode=@SortCode,
+            isPriceAffect=@isPriceAffect,
+            isDishPrice=@isDishPrice,
+            DishCost=@DishCost,
+            isOpenModifier=@isOpenModifier,
+            ModifyOn=@ModifyOn
           WHERE ModifierId=@ModifierId
         `);
 
@@ -1365,14 +1360,23 @@ app.post("/modifiermaster", async (req, res) => {
       // 🆕 INSERT
       await pool.request()
         .input("ModifierId", sql.UniqueIdentifier, modId)
-        .input("ModifierName", sql.VarChar(100), ModifierName)
+        .input("ModifierCode", sql.VarChar(50), ModifierCode)
+        .input("ModifierName", sql.NVarChar(100), ModifierName)
+        .input("ConflictId", sql.UniqueIdentifier, ConflictId || null)
         .input("isActive", sql.Bit, isActive ?? true)
+        .input("SortCode", sql.Int, SortCode || 0)
+        .input("isPriceAffect", sql.Bit, isPriceAffect ?? false)
+        .input("isDishPrice", sql.Bit, isDishPrice ?? false)
+        .input("DishCost", sql.Decimal(18,2), DishCost || 0)
+        .input("isOpenModifier", sql.Bit, isOpenModifier ?? false)
         .input("CreatedOn", sql.DateTime, new Date())
         .query(`
           INSERT INTO ModifierMaster
-          (ModifierId, ModifierName, isActive, CreatedOn)
+          (ModifierId, ModifierCode, ModifierName, ConflictId, isActive, SortCode,
+           isPriceAffect, isDishPrice, DishCost, isOpenModifier, CreatedOn)
           VALUES
-          (@ModifierId, @ModifierName, @isActive, @CreatedOn)
+          (@ModifierId, @ModifierCode, @ModifierName, @ConflictId, @isActive, @SortCode,
+           @isPriceAffect, @isDishPrice, @DishCost, @isOpenModifier, @CreatedOn)
         `);
     }
 
