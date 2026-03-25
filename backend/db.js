@@ -10,11 +10,15 @@ const dbConfig = {
   database: process.env.DB_DATABASE,
 
   options: {
-    encrypt: process.env.DB_ENCRYPT === "true",
-    enableArithAbort: process.env.DB_ARITH_ABORT === "true",
+    // encrypt: process.env.DB_ENCRYPT === "true",
+    // enableArithAbort: process.env.DB_ARITH_ABORT === "true",
+    encrypt: false, // 🔥 IMPORTANT
+    trustServerCertificate: true, // 🔥 MUST ADD
+    enableArithAbort: true,
   },
 
-  requestTimeout: parseInt(process.env.DB_REQUEST_TIMEOUT),
+  // requestTimeout: parseInt(process.env.DB_REQUEST_TIMEOUT),
+   requestTimeout: 60000,
 };
 
 // Create a single connection pool
