@@ -1028,7 +1028,20 @@ app.get("/dish", async (req, res) => {
                                                               where  D.ImageId = I.ImageId) ImageData
                                                FROM DishMaster D
                                                 ORDER BY D.CreatedOn DESC`);
-    res.json(result.recordset);
+    const data = result.recordset.map(row => {
+  let imageBase64 = null;
+
+  if (row.ImageData) {
+    imageBase64 = `data:image/jpeg;base64,${row.ImageData.toString("base64")}`;
+  }
+
+  return {
+    ...row,
+    ImageData: imageBase64
+  };
+});
+
+res.json(data);
   } catch (err) {
     res.status(500).send(err.message);
   }
