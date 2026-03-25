@@ -53,10 +53,20 @@ app.get("/kitchen", async (req, res) => {
 
     res.json(result.recordset);
   } catch (err) {
-    console.error("Error fetching kitchens:", err);
-    res.status(500).send("Server Error");
-  }
-});
+  console.error("🔥 KITCHEN ERROR FULL:", err);
+
+  res.status(500).json({
+    message: "Kitchen API Failed",
+    error: err.message,
+    stack: err.stack
+  });
+}
+ });
+//   catch (err) {
+//     console.error("Error fetching kitchens:", err);
+//      res.status(500).send("Server Error");
+//   }
+// });
 
 /* ------------------- GET NEXT KITCHEN CODE ------------------- */
 app.get("/kitchen/nextcode", async (req, res) => {
