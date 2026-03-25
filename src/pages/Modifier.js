@@ -11,6 +11,7 @@ const API = `${BASE_URL}`;
   const [editIndex, setEditIndex] = useState(null);
 
   const [modifier, setModifier] = useState({
+     ModifierId: "",
     ModifierCode: "",
     ModifierName: "",
     ConflictId: "",
@@ -42,7 +43,15 @@ const loadModifiers = async () => {
 
  const handleSave = async () => {
   try {
-    if (editIndex !== null) {
+
+     const cleanData = {
+      ...modifier,
+      ModifierName: modifier.ModifierName.trim().replace(/^'+|'+$/g, "")
+    };
+
+    console.log("Sending:", cleanData);
+    if (modifier.ModifierId) {
+
       await axios.put(`${API}/modifiermaster/${modifier.ModifierId}`, modifier);
     } else {
       await axios.post(`${API}/modifiermaster`, modifier);
@@ -54,6 +63,7 @@ const loadModifiers = async () => {
     setEditIndex(null);
 
     setModifier({
+      ModifierId: "", 
       ModifierCode: "",
       ModifierName: "",
       ConflictId: "",
@@ -79,9 +89,9 @@ const handleDelete = async (id) => {
 
   const handleEdit = (index) => {
   const item = modifierList[index];
-
+console.log("ITEM:", item); // debug
   setModifier({
-    ModifierId: item.ModifierId,
+    ModifierId: item.ModifierId || "",
     ModifierCode: item.ModifierCode || "",
     ModifierName: item.ModifierName || "",
     ConflictId: item.ConflictId || "",
@@ -115,6 +125,7 @@ const handleDelete = async (id) => {
             <th>SortCode</th>
             <th>isPriceAffect</th>
             <th>isOpenModifier</th>
+            <th>Action</th>
           </tr>
         </thead>
 

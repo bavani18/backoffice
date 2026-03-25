@@ -159,6 +159,9 @@ const handleSubmit = async (e)=>{
 
 e.preventDefault();
 
+  console.log("IMAGE TYPE:", typeof image);
+  console.log("IMAGE VALUE:", image);
+
 if(!form.CategoryCode || !form.CategoryName){
 alert("Please fill Category Code and Category Name");
 return;
@@ -198,8 +201,8 @@ KitchenTypeName: k.KitchenTypeName
 )
 );
 
-if(image){
-data.append("image",image);
+if (image && typeof image !== "string") {
+  data.append("image", image);
 }
 
 await axios.post(
@@ -475,7 +478,7 @@ ref={fileInputRef}
 style={{display:"none"}}
 onChange={(e)=>{
 if(e.target.files && e.target.files[0]){
-setImage(e.target.files[0]);
+ setImage(e.target.files[0]);
 }
 }}
 />

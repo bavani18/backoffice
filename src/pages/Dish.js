@@ -187,7 +187,7 @@ const handleEdit = (index) => {
   setEditIndex(index);
 
   // 🔥 IMPORTANT
-  setExistingImage(data.ImageName || null);
+  setExistingImage(data.ImageData || null);
   setCategoryImage(null); // reset new upload
 
     // 🔥 ADD THIS (MODIFIER GET)
@@ -412,7 +412,7 @@ const handleEdit = (index) => {
                                   />
                                 ) : existingImage ? (
                                  <img
-                                    src={`${BASE_URL}/images/Dish/${existingImage}`}
+                                    src={existingImage}
                                     style={{ width: "100%", height: "100%", objectFit: "cover" }}
                                 />
                               ) : null}
@@ -455,7 +455,7 @@ const handleEdit = (index) => {
              ) : existingImage ? (
             <>
           <img
-        src={`${BASE_URL}/images/Dish/${existingImage}`}
+        src={existingImage}
         style={{ width: "100%", height: "100%", objectFit: "cover" }}
       />
     {displayName && (
