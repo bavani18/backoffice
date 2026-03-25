@@ -1299,11 +1299,21 @@ app.get("/modifiermaster", async (req, res) => {
   try {
     const pool = await poolPromise;
 
-    const result = await pool.request().query(`
-      SELECT  *
-      FROM ModifierMaster
-      ORDER BY ModifierName
-    `);
+   const result = await pool.request().query(`
+  SELECT 
+    ModifierId,
+    ModifierCode,
+    ModifierName,
+    ConflictId,
+    isActive,
+    SortCode,
+    isPriceAffect,
+    isDishPrice,
+    DishCost,
+    isOpenModifier
+  FROM ModifierMaster
+  ORDER BY ModifierName
+`);
 
     res.json(result.recordset);
 
