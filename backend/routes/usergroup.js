@@ -3,7 +3,7 @@ const router = express.Router();
 const { sql, poolPromise } = require("../db");
 
 
-// 🔥 GET ALL USER GROUPS
+// 🔥 GET ALL
 router.get("/", async (req, res) => {
   try {
     const pool = await poolPromise;
@@ -15,10 +15,11 @@ router.get("/", async (req, res) => {
           UserGroupCode,
           UserGroupName,
           isActive,
+          CreatedUser,
           Createddate,
+          ModifyUser,
           ModifyDate
         FROM UserGroupMaster
-        WHERE isActive = 1
         ORDER BY Createddate DESC
       `);
 
@@ -36,10 +37,10 @@ router.get("/:code", async (req, res) => {
     const pool = await poolPromise;
 
     const result = await pool.request()
-      .input("code", sql.VarChar, req.params.code)
+      .input("UserGroupCode", sql.VarChar, req.params.code)
       .query(`
-        SELECT * FROM UserGroupMaster 
-        WHERE UserGroupCode = @code
+        SELECT * FROM UserGroupMaster
+        WHERE UserGroupCode = @UserGroupCode
       `);
 
     res.json(result.recordset[0]);
@@ -53,29 +54,52 @@ router.get("/:code", async (req, res) => {
 // 🔥 CREATE (POST)
 router.post("/", async (req, res) => {
   try {
-    // ✅ FIXED NAMES
-    const { userGroupCode, userGroupName, isActive } = req.body;
+    const {
+      userGroupCode,
+      userGroupName,
+      isActive,
+      createdUser
+    } = req.body;
 
     const pool = await poolPromise;
 
-    // 🔍 duplicate check
+    // 🔍 Duplicate check
     const check = await pool.request()
-      .input("code", sql.VarChar, userGroupCode)
-      .query("SELECT * FROM UserGroupMaster WHERE UserGroupCode=@code");
+      .input("UserGroupCode", sql.VarChar, userGroupCode)
+      .query(`
+        SELECT * FROM UserGroupMaster 
+        WHERE UserGroupCode = @UserGroupCode
+      `);
 
     if (check.recordset.length > 0) {
       return res.status(400).send("Code already exists ❌");
     }
 
     await pool.request()
-      .input("id", sql.UniqueIdentifier, sql.UniqueIdentifier().generate())
-      .input("code", sql.VarChar, userGroupCode)
-      .input("name", sql.VarChar, userGroupName)
+      .input("UserGroupId", sql.UniqueIdentifier, sql.UniqueIdentifier().generate())
+      .input("UserGroupCode", sql.VarChar, userGroupCode)
+      .input("UserGroupName", sql.VarChar, userGroupName)
       .input("isActive", sql.Bit, isActive)
+      .input("CreatedUser", sql.UniqueIdentifier, createdUser || null)
       .query(`
         INSERT INTO UserGroupMaster 
-        (UserGroupId, UserGroupCode, UserGroupName, isActive)
-        VALUES (@id, @code, @name, @isActive)
+        (
+          UserGroupId,
+          UserGroupCode,
+          UserGroupName,
+          isActive,
+          CreatedUser,
+          Createddate
+        )
+        VALUES 
+        (
+          @UserGroupId,
+          @UserGroupCode,
+          @UserGroupName,
+          @isActive,
+          @CreatedUser,
+          GETDATE()
+        )
       `);
 
     res.send("Created Successfully ✅");
@@ -89,21 +113,27 @@ router.post("/", async (req, res) => {
 // 🔥 UPDATE (PUT)
 router.put("/:id", async (req, res) => {
   try {
-    // ✅ FIXED NAMES
-    const { userGroupName, isActive } = req.body;
+    const {
+      userGroupName,
+      isActive,
+      modifyUser
+    } = req.body;
 
     const pool = await poolPromise;
 
     await pool.request()
-      .input("id", sql.UniqueIdentifier, req.params.id)
-      .input("name", sql.VarChar, userGroupName)
+      .input("UserGroupId", sql.UniqueIdentifier, req.params.id)
+      .input("UserGroupName", sql.VarChar, userGroupName)
       .input("isActive", sql.Bit, isActive)
+      .input("ModifyUser", sql.UniqueIdentifier, modifyUser || null)
       .query(`
         UPDATE UserGroupMaster
-        SET UserGroupName=@name,
-            isActive=@isActive,
-            ModifyDate = GETDATE()
-        WHERE UserGroupId=@id
+        SET 
+          UserGroupName = @UserGroupName,
+          isActive = @isActive,
+          ModifyUser = @ModifyUser,
+          ModifyDate = GETDATE()
+        WHERE UserGroupId = @UserGroupId
       `);
 
     res.send("Updated Successfully ✅");
@@ -114,16 +144,19 @@ router.put("/:id", async (req, res) => {
 });
 
 
-// 🔥 DELETE (better use ID)
+// 🔥 DELETE (SOFT DELETE)
 router.delete("/:id", async (req, res) => {
   try {
     const pool = await poolPromise;
 
     await pool.request()
-      .input("id", sql.UniqueIdentifier, req.params.id)
+      .input("UserGroupId", sql.UniqueIdentifier, req.params.id)
       .query(`
-        DELETE FROM UserGroupMaster
-        WHERE UserGroupId=@id
+        UPDATE UserGroupMaster
+        SET 
+          isActive = 0,
+          ModifyDate = GETDATE()
+        WHERE UserGroupId = @UserGroupId
       `);
 
     res.send("Deleted Successfully ✅");
@@ -132,5 +165,6 @@ router.delete("/:id", async (req, res) => {
     res.status(500).send(err.message);
   }
 });
+
 
 module.exports = router;
