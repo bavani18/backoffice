@@ -7,10 +7,8 @@ const { sql, poolPromise } = require("./db");
 const { v4: uuidv4 } = require("uuid");
 const multer = require('multer'); 
 const path = require("path");
-// const fs = require("fs");
+const fs = require("fs");
 
-// const storage = multer.memoryStorage();
-// const upload = multer({ storage });
 
 const app = express();
 
@@ -25,8 +23,12 @@ app.use(cors(corsOptions));
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ limit: "10mb", extended: true }));
 
-app.use(cors());
-
+// app.use(cors());
+app.use(cors({
+  origin: "*", 
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+}));
 app.use(express.json());
 
 const inventoryRoutes = require("./routes/inventory");
@@ -244,18 +246,16 @@ app.delete("/kitchen/:id", async (req, res) => {
 //-============================================start CATEGORIES==============
 
 // --- Multer config for image upload ---
-// const storage = multer.diskStorage({
-//   destination: (req, file, cb) => {
-//     const dir = path.join(__dirname, "images", "Dish");
-//     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-//     cb(null, dir);
-//   },
-//   filename: (req, file, cb) => {
-//     cb(null, Date.now() + "_" + file.originalname);
-//   },
-// });
-const storage = multer.memoryStorage();
-// const upload = multer({ storage });
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = path.join(__dirname, "images", "Dish");
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + "_" + file.originalname);
+  },
+});
 const upload = multer({ storage });
 
 // ---------------- GET ALL CATEGORIES ----------------
@@ -338,9 +338,8 @@ if (!catId || catId === "") {
 
     if (req.file) {
       imageId = uuidv4();
-      imageName = req.file.originalname;
-      // const imageBuffer = fs.readFileSync(req.file.path);
-      const imageBuffer = req.file.buffer;
+      imageName = req.file.filename;
+      const imageBuffer = fs.readFileSync(req.file.path);
       await pool
         .request()
         .input("ImageId", sql.UniqueIdentifier, imageId)
@@ -363,7 +362,7 @@ let request = pool.request()
 .input("CategoryName", sql.VarChar(100), CategoryName)
 .input("SortCode", sql.Int, SortCode)
 .input("isActive", sql.Bit, isActive ?? false)
-.input("ShortName", sql.VarChar(50), ShortName || "")
+.input("ShortName", sql.VarChar(50), ShortName)
 .input("BackColor", sql.NVarChar(50), safeBackColor)
 .input("ForeColor", sql.NVarChar(50), safeForeColor)
 .input("isKitchenPrint", sql.Bit, isKitchenPrint ?? false)
@@ -375,9 +374,7 @@ let request = pool.request()
 .input("NameInOtherLanguage", sql.VarChar(100), NameInOtherLanguage);
 
 // ⭐ only add ImageId if new image uploaded
-if (imageId) {
-  request.input("ImageId", sql.UniqueIdentifier, imageId);
-}
+request.input("ImageId", sql.UniqueIdentifier, imageId || null);
 
 await request.query(`
 UPDATE CategoryMaster SET
@@ -405,18 +402,18 @@ WHERE CategoryId=@CategoryId
         .input("CategoryId", sql.UniqueIdentifier, catId)
         .input("CategoryCode", sql.VarChar(20), CategoryCode)
         .input("CategoryName", sql.VarChar(100), CategoryName)
-        .input("SortCode", sql.Int, Number(SortCode) || 0)
-        .input("isActive", sql.Bit, isActive == "true" || isActive == 1)
+        .input("SortCode", sql.Int, SortCode)
+        .input("isActive", sql.Bit, isActive ?? false)
         .input("ShortName", sql.VarChar(50), ShortName)
         .input("ImageId", sql.UniqueIdentifier, imageId)
         .input("BackColor", sql.NVarChar(50), safeBackColor)
         .input("ForeColor", sql.NVarChar(50), safeForeColor)
-       .input("isKitchenPrint", sql.Bit, isKitchenPrint == "true" || isKitchenPrint == 1)
-        .input("isDiscountAllowed", sql.Bit, isDiscountAllowed == "true" || isDiscountAllowed == 1)
-        .input("isServiceCharge", sql.Bit, isServiceCharge == "true" || isServiceCharge == 1)
-        .input("isDispName", sql.Bit, isDispName == "true" || isDispName == 1)
-        .input("isMemberSalesAllowed", sql.Bit, isMemberSalesAllowed == "true" || isMemberSalesAllowed == 1)
-        .input("isTaxAllowed", sql.Bit, isTaxAllowed == "true" || isTaxAllowed == 1)
+        .input("isKitchenPrint", sql.Bit, isKitchenPrint ?? false)
+        .input("isDiscountAllowed", sql.Bit, isDiscountAllowed ?? false)
+        .input("isServiceCharge", sql.Bit, isServiceCharge ?? false)
+        .input("isDispName", sql.Bit, isDispName ?? false)
+        .input("isMemberSalesAllowed", sql.Bit, isMemberSalesAllowed ?? false)
+        .input("isTaxAllowed", sql.Bit, isTaxAllowed ?? false)
         .input("NameInOtherLanguage", sql.VarChar(100), NameInOtherLanguage)
         .input("CreatedBy", sql.UniqueIdentifier, uuidv4())
         .input("CreatedOn", sql.DateTime, new Date())
@@ -432,25 +429,16 @@ WHERE CategoryId=@CategoryId
     await pool.request()
 .input("CategoryId", sql.UniqueIdentifier, catId)
 .query("DELETE FROM CategoryModifier WHERE CategoryId=@CategoryId");
-    let mods = [];
-
-          if (Modifiers) {
-            try {
-              mods = JSON.parse(Modifiers);
-            } catch (e) {
-              mods = [];
-            }
-          }
-
-          for (let modId of mods) {
-            await pool.request()
-              .input("CategoryId", sql.UniqueIdentifier, catId)
-              .input("ModifierId", sql.UniqueIdentifier, modId)
-              .query(`
-                INSERT INTO CategoryModifier (CategoryId, ModifierId)
-                VALUES (@CategoryId, @ModifierId)
-              `);
-          }
+    if (Modifiers && Array.isArray(JSON.parse(Modifiers))) {
+      const mods = JSON.parse(Modifiers);
+      for (let modId of mods) {
+        await pool
+          .request()
+          .input("CategoryId", sql.UniqueIdentifier, catId)
+          .input("ModifierId", sql.UniqueIdentifier, modId)
+          .query("INSERT INTO CategoryModifier (CategoryId, ModifierId) VALUES (@CategoryId, @ModifierId)");
+      }
+    }
 
     // Save KitchenTypes
 
