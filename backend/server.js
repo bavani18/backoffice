@@ -248,7 +248,20 @@ app.get("/category", async (req, res) => {
     const request = pool.request();
     if (CategoryCode) request.input("CategoryCode", sql.VarChar, CategoryCode);
     const result = await request.query(query);
-    res.json(result.recordset);
+    const data = result.recordset.map(row => {
+  let imageBase64 = null;
+
+  if (row.ImageData) {
+    imageBase64 = `data:image/jpeg;base64,${row.ImageData.toString("base64")}`;
+  }
+
+  return {
+    ...row,
+    ImageData: imageBase64
+  };
+});
+
+res.json(data);
   } catch (err) {
     console.error(err);
     res.status(500).send("Server Error");
@@ -670,7 +683,20 @@ app.get("/dishgroup", async (req, res) => {
       ORDER BY C.DishGroupCode
     `);
 
-  res.json(result.recordset);
+ const data = result.recordset.map(row => {
+  let imageBase64 = null;
+
+  if (row.ImageData) {
+    imageBase64 = `data:image/jpeg;base64,${row.ImageData.toString("base64")}`;
+  }
+
+  return {
+    ...row,
+    ImageData: imageBase64
+  };
+});
+
+res.json(data);
 
   } catch (err) {
     console.log(err);
