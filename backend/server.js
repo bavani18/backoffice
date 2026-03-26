@@ -338,7 +338,7 @@ if (!catId || catId === "") {
 
     if (req.file) {
       imageId = uuidv4();
-      imageName = req.file.filename;
+      imageName = req.file.originalname;
       // const imageBuffer = fs.readFileSync(req.file.path);
       const imageBuffer = req.file.buffer;
       await pool
@@ -363,7 +363,7 @@ let request = pool.request()
 .input("CategoryName", sql.VarChar(100), CategoryName)
 .input("SortCode", sql.Int, SortCode)
 .input("isActive", sql.Bit, isActive ?? false)
-.input("ShortName", sql.VarChar(50), ShortName)
+.input("ShortName", sql.VarChar(50), ShortName || "")
 .input("BackColor", sql.NVarChar(50), safeBackColor)
 .input("ForeColor", sql.NVarChar(50), safeForeColor)
 .input("isKitchenPrint", sql.Bit, isKitchenPrint ?? false)
@@ -405,18 +405,18 @@ WHERE CategoryId=@CategoryId
         .input("CategoryId", sql.UniqueIdentifier, catId)
         .input("CategoryCode", sql.VarChar(20), CategoryCode)
         .input("CategoryName", sql.VarChar(100), CategoryName)
-        .input("SortCode", sql.Int, SortCode)
-        .input("isActive", sql.Bit, isActive ?? false)
+        .input("SortCode", sql.Int, Number(SortCode) || 0)
+        .input("isActive", sql.Bit, isActive == "true" || isActive == 1)
         .input("ShortName", sql.VarChar(50), ShortName)
         .input("ImageId", sql.UniqueIdentifier, imageId)
         .input("BackColor", sql.NVarChar(50), safeBackColor)
         .input("ForeColor", sql.NVarChar(50), safeForeColor)
-        .input("isKitchenPrint", sql.Bit, isKitchenPrint ?? false)
-        .input("isDiscountAllowed", sql.Bit, isDiscountAllowed ?? false)
-        .input("isServiceCharge", sql.Bit, isServiceCharge ?? false)
-        .input("isDispName", sql.Bit, isDispName ?? false)
-        .input("isMemberSalesAllowed", sql.Bit, isMemberSalesAllowed ?? false)
-        .input("isTaxAllowed", sql.Bit, isTaxAllowed ?? false)
+       .input("isKitchenPrint", sql.Bit, isKitchenPrint == "true" || isKitchenPrint == 1)
+        .input("isDiscountAllowed", sql.Bit, isDiscountAllowed == "true" || isDiscountAllowed == 1)
+        .input("isServiceCharge", sql.Bit, isServiceCharge == "true" || isServiceCharge == 1)
+        .input("isDispName", sql.Bit, isDispName == "true" || isDispName == 1)
+        .input("isMemberSalesAllowed", sql.Bit, isMemberSalesAllowed == "true" || isMemberSalesAllowed == 1)
+        .input("isTaxAllowed", sql.Bit, isTaxAllowed == "true" || isTaxAllowed == 1)
         .input("NameInOtherLanguage", sql.VarChar(100), NameInOtherLanguage)
         .input("CreatedBy", sql.UniqueIdentifier, uuidv4())
         .input("CreatedOn", sql.DateTime, new Date())
