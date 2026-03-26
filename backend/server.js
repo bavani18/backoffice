@@ -432,16 +432,25 @@ WHERE CategoryId=@CategoryId
     await pool.request()
 .input("CategoryId", sql.UniqueIdentifier, catId)
 .query("DELETE FROM CategoryModifier WHERE CategoryId=@CategoryId");
-    if (Modifiers && Array.isArray(JSON.parse(Modifiers))) {
-      const mods = JSON.parse(Modifiers);
-      for (let modId of mods) {
-        await pool
-          .request()
-          .input("CategoryId", sql.UniqueIdentifier, catId)
-          .input("ModifierId", sql.UniqueIdentifier, modId)
-          .query("INSERT INTO CategoryModifier (CategoryId, ModifierId) VALUES (@CategoryId, @ModifierId)");
-      }
-    }
+    let mods = [];
+
+          if (Modifiers) {
+            try {
+              mods = JSON.parse(Modifiers);
+            } catch (e) {
+              mods = [];
+            }
+          }
+
+          for (let modId of mods) {
+            await pool.request()
+              .input("CategoryId", sql.UniqueIdentifier, catId)
+              .input("ModifierId", sql.UniqueIdentifier, modId)
+              .query(`
+                INSERT INTO CategoryModifier (CategoryId, ModifierId)
+                VALUES (@CategoryId, @ModifierId)
+              `);
+          }
 
     // Save KitchenTypes
 
