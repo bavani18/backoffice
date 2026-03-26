@@ -1,5 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "./Inventory.css";
+
+import { BASE_URL } from "../config/api";
+
+// const BASE_URL = "http://localhost:3000";
 
 function Inventory() {
   const [showModal, setShowModal] = useState(false);
@@ -21,6 +25,20 @@ function Inventory() {
     avgCost: "",
   });
 
+  useEffect(() => {
+    fetchInventory();
+  }, []);
+
+  const fetchInventory = async () => {
+    try {
+      const res = await fetch(`${BASE_URL}/inventory`);
+      const data = await res.json();
+      setInventoryList(data);
+    } catch (err) {
+      console.error("GET ERROR ❌", err);
+    }
+  };
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setItem({
@@ -29,18 +47,40 @@ function Inventory() {
     });
   };
 
-  const handleSave = () => {
-    if (editIndex !== null) {
-      const updated = [...inventoryList];
-      updated[editIndex] = item;
-      setInventoryList(updated);
-    } else {
-      setInventoryList([...inventoryList, item]);
-    }
+  const handleSave = async () => {
+    try {
+      if (editIndex !== null) {
+        const id = inventoryList[editIndex].InventoryId;
 
-    setShowModal(false);
-    setEditIndex(null);
-    resetForm();
+        await fetch(`${BASE_URL}/inventory/${id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            Description: item.description,
+            Price: item.price
+          })
+        });
+
+      } else {
+        await fetch(`${BASE_URL}/inventory`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            InventoryCode: item.itemCode,
+            Description: item.description,
+            Price: item.price
+          })
+        });
+      }
+
+      fetchInventory();
+      setShowModal(false);
+      setEditIndex(null);
+      resetForm();
+
+    } catch (err) {
+      console.error("SAVE ERROR ❌", err);
+    }
   };
 
   const resetForm = () => {
@@ -61,7 +101,23 @@ function Inventory() {
   };
 
   const handleEdit = (index) => {
-    setItem(inventoryList[index]);
+    const data = inventoryList[index];
+
+    setItem({
+      itemCode: data.InventoryCode,
+      description: data.Description,
+      inventoryGroup: data.InventoryGroup,
+      brand: data.BrandId,
+      uom: data.Uom,
+      grossCost: data.GrossCost,
+      sortCode: data.SordCode,
+      discountAllowed: data.isDiscountAllowed,
+      active: data.IsActive,
+      vendor: data.VendorId,
+      price: data.Price,
+      avgCost: data.CurrentCost
+    });
+
     setEditIndex(index);
     setShowModal(true);
   };
@@ -70,7 +126,13 @@ function Inventory() {
     <div className="inventory-container">
       <h1 className="title">Inventory</h1>
 
-      <button className="new-btn" onClick={() => setShowModal(true)}>
+      <button
+        className="new-btn"
+        onClick={() => {
+          resetForm();
+          setShowModal(true);
+        }}
+      >
         New
       </button>
 
@@ -97,40 +159,42 @@ function Inventory() {
             </tr>
           ) : (
             inventoryList.map((item, index) => (
-              <tr key={index} onClick={() => handleEdit(index)} style={{ cursor: "pointer" }}>
-                <td>{item.itemCode}</td>
-                <td>{item.description}</td>
-                <td>{item.inventoryGroup}</td>
-                <td>{item.brand}</td>
-                <td>{item.uom}</td>
-                <td>{item.grossCost}</td>
-                <td>{item.price}</td>
-                <td>{item.avgCost}</td>
-                <td>{item.active ? "Yes" : "No"}</td>
-                
+              <tr
+                key={index}
+                onClick={() => handleEdit(index)}
+                style={{ cursor: "pointer" }}
+              >
+                <td>{item.InventoryCode}</td>
+                <td>{item.Description}</td>
+                <td>{item.InventoryGroup}</td>
+                <td>{item.BrandId}</td>
+                <td>{item.Uom}</td>
+                <td>{item.GrossCost}</td>
+                <td>{item.Price}</td>
+                <td>{item.CurrentCost}</td>
+                <td>{item.IsActive ? "Yes" : "No"}</td>
               </tr>
             ))
           )}
         </tbody>
       </table>
 
-      {/* Modal */}
       {showModal && (
         <div className="modal-overlay-in">
           <div className="modal-box-in">
             <h2>{editIndex !== null ? "Edit Item" : "Add Item"}</h2>
 
             <div className="form-grid">
-              <input placeholder="Item Code" name="itemCode" value={item.itemCode} onChange={handleChange} />
-              <input placeholder="Description" name="description" value={item.description} onChange={handleChange} />
-              <input placeholder="Inventory Group" name="inventoryGroup" value={item.inventoryGroup} onChange={handleChange} />
-              <input placeholder="Brand" name="brand" value={item.brand} onChange={handleChange} />
-              <input placeholder="UOM" name="uom" value={item.uom} onChange={handleChange} />
-              <input type="number" placeholder="Gross Cost" name="grossCost" value={item.grossCost} onChange={handleChange} />
-              <input type="number" placeholder="Sort Code" name="sortCode" value={item.sortCode} onChange={handleChange} />
-              <input placeholder="Vendor" name="vendor" value={item.vendor} onChange={handleChange} />
-              <input type="number" placeholder="Price" name="price" value={item.price} onChange={handleChange} />
-              <input type="number" placeholder="Avg Cost" name="avgCost" value={item.avgCost} onChange={handleChange} />
+              <input name="itemCode" value={item.itemCode} onChange={handleChange} placeholder="Item Code" />
+              <input name="description" value={item.description} onChange={handleChange} placeholder="Description" />
+              <input name="inventoryGroup" value={item.inventoryGroup} onChange={handleChange} placeholder="Group" />
+              <input name="brand" value={item.brand} onChange={handleChange} placeholder="Brand" />
+              <input name="uom" value={item.uom} onChange={handleChange} placeholder="UOM" />
+              <input type="number" name="grossCost" value={item.grossCost} onChange={handleChange} placeholder="Gross Cost" />
+              <input type="number" name="sortCode" value={item.sortCode} onChange={handleChange} placeholder="Sort Code" />
+              <input name="vendor" value={item.vendor} onChange={handleChange} placeholder="Vendor" />
+              <input type="number" name="price" value={item.price} onChange={handleChange} placeholder="Price" />
+              <input type="number" name="avgCost" value={item.avgCost} onChange={handleChange} placeholder="Avg Cost" />
             </div>
 
             <div className="checkbox-group">

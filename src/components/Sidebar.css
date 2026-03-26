@@ -32,7 +32,7 @@
 
 /* Sidebar */
 .sidebar {
-  height: 100vh;
+   height: calc(100vh - 60px); /* header height */
   background: #58236ee9;
   padding: 20px;
   position: fixed;
@@ -40,6 +40,8 @@
   top: 50px;
   transition: 0.3s;
   overflow: hidden;
+  overflow-y: auto;     /* scroll enable */
+   padding-bottom: 50px;
 }
 
 .sidebar.open {
@@ -71,10 +73,7 @@
   background: #fc00fc;
 }
 
-.sidebar {
-  height: 100vh;          /* full screen height */
-  overflow-y: auto;       /* 🔥 enable vertical scroll */
-}
+
 
 /* .topbar {
   display: flex;

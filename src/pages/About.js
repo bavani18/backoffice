@@ -130,9 +130,12 @@ setForm({
 const handleEdit = (index)=>{
 const row = entries[index];
 setForm({...row});
-if(row.ImageName){
-setImage(`${BASE_URL}/images/Dish/`+ row.ImageName);
-}// image load ஆகும்
+// if(row.ImageName){
+// setImage(`${BASE_URL}/images/Dish/`+ row.ImageName);
+// }
+if(row.ImageData){
+  setImage(row.ImageData);
+}
 
 setBgColor(row.BackColor || "#000000");
 setTextColor(row.ForeColor || "#ffffff");

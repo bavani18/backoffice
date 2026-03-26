@@ -41,7 +41,7 @@ SubkitchenType: "",
   try{
   
   const res = await axios.get(`${BASE_URL}/dish`);
-  
+ 
   setEntries(res.data);
   
   }catch(err){
@@ -61,6 +61,13 @@ useEffect(()=>{
   axios.get(`${BASE_URL}/kitchen`)
     .then(res => setdishKitchens(res.data));
 
+     axios.get(`${BASE_URL}/dishgroup`)
+  .then(res => {
+    console.log("DISH GROUP DATA 👉", res.data); // ✅ CHECK HERE
+    setDishGroups(res.data);
+  })
+  .catch(err => console.error("DishGroup error:", err));
+
 },[]);
 
 const [entries,setEntries] = useState([]);
@@ -74,6 +81,7 @@ const [entries,setEntries] = useState([]);
   const [textColor, setTextColor] = useState("#fff");
   const [displayName, setDisplayName] = useState(true);
   const [existingImage, setExistingImage] = useState(null);
+   const [dishGroups, setDishGroups] = useState([]);
 
 const [dishmodifier, setdishModifiers] = useState([]);
 const [dishkitchens, setdishKitchens] = useState([]);
@@ -178,10 +186,17 @@ const [selecteddishKitchens, setSelecteddishKitchens] = useState([]);
     setEditIndex(null);
     setShowModal(true);
   };
+
+  
+const getGroupName = (id) => {
+  const group = dishGroups.find(g => g.DishGroupId === id);
+  return group ? group.DishGroupName : id; 
+};
  
 const handleEdit = (index) => {
    const row = entries[index];
   const data = entries[index];
+  
 
   setDish(data);
   setEditIndex(index);
@@ -260,7 +275,7 @@ const handleEdit = (index) => {
                   <td>{d.Name}</td>
                   <td>{d.ShortName}</td>
                   <td>{d.Description}</td>
-                  <td>{d.DishGroupId}</td>
+                 <td>{getGroupName(d.DishGroupId)}</td>
                   <td>{d.CurrentCost}</td>
                   <td>{d.SordCode}</td>
                   <td>{d.UnitCost}</td>
@@ -329,7 +344,19 @@ const handleEdit = (index) => {
  
                 <div className="dish-form-row1">
                   <label>Dish Group</label>
-                  <input name="DishGroupId" value={dish.DishGroupId} onChange={handleChange} />
+                 <select
+                    name="DishGroupId"
+                    value={dish.DishGroupId}
+                    onChange={handleChange}
+                  >
+                    <option value="">-- Select Dish Group --</option>
+
+                    {dishGroups.map((g) => (
+                      <option key={g.DishGroupId} value={g.DishGroupId}>
+                        {g.DishGroupName}
+                      </option>
+                    ))}
+                  </select>
                 </div>
  
                 {/* PRICE ROW */}

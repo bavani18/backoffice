@@ -1,260 +1,307 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import "./Settlement.css";
- 
+import axios from "axios";
+import { BASE_URL } from "../config/api";
+
 export default function Settlement() {
- 
-const [dateTime,setDateTime] = useState("");
- 
-useEffect(()=>{
- 
-const interval=setInterval(()=>{
-const now=new Date();
- 
-const formatted=
-now.toLocaleDateString()+" "+
-now.toLocaleTimeString();
- 
-setDateTime(formatted);
- 
-},1000)
- 
-return ()=>clearInterval(interval)
- 
-},[])
- 
-const [summary,setSummary] = useState({
-salesTotal:0,
-discount:0,
-service:0,
-gst:0,
-round:0,
-tips:0,
-netSales:0,
-guests:0,
-void:0
-})
- 
-const [salesSummary,setSalesSummary] = useState([
-{mode:"CASH",amount:0},
-{mode:"NETS",amount:15},
-{mode:"PAYNOW",amount:58.5}
-])
- 
-const handleChange=(e)=>{
-setSummary({...summary,[e.target.name]:e.target.value})
-}
- 
-return(
- 
-<div className="cashier-container">
- 
-<h2>Cashier Settlement</h2>
- 
-<div className="top-row">
- 
-<label>Terminal</label>
- 
-<select>
-<option>SR</option>
-</select>
- 
-<input value={dateTime} readOnly/>
- 
-</div>
- 
- 
-<div className="main-grid">
- 
-{/* LEFT PANEL */}
- 
-<div className="left-panel">
- 
-<table className="summary-table">
- 
-<tbody>
- 
-<tr>
-<td>Sales Total</td>
-<td><input name="salesTotal" value={summary.salesTotal} onChange={handleChange}/></td>
-</tr>
- 
-<tr>
-<td>Total Discount</td>
-<td><input name="discount" value={summary.discount} onChange={handleChange}/></td>
-</tr>
- 
-<tr>
-<td>Service Charge</td>
-<td><input name="service" value={summary.service} onChange={handleChange}/></td>
-</tr>
- 
-<tr>
-<td>GST</td>
-<td><input name="gst" value={summary.gst} onChange={handleChange}/></td>
-</tr>
- 
-<tr>
-<td>Round Off</td>
-<td><input name="round" value={summary.round} onChange={handleChange}/></td>
-</tr>
- 
-<tr>
-<td>Tips</td>
-<td><input name="tips" value={summary.tips} onChange={handleChange}/></td>
-</tr>
- 
-<tr className="bold">
-<td>Net Sales</td>
-<td><input name="netSales" value={summary.netSales} onChange={handleChange}/></td>
-</tr>
- 
-<tr>
-<td>Number Of Guests</td>
-<td><input name="guests" value={summary.guests} onChange={handleChange}/></td>
-</tr>
- 
-<tr>
-<td>Void</td>
-<td><input name="void" value={summary.void} onChange={handleChange}/></td>
-</tr>
- 
-</tbody>
- 
-</table>
- 
-<h3>Transactions</h3>
- 
-<table className="table">
- 
-<thead>
-<tr>
-<th>Paymode</th>
-<th>Cash In</th>
-<th>Cash Out</th>
-</tr>
-</thead>
- 
-<tbody>
- 
-<tr>
-<td><input/></td>
-<td><input/></td>
-<td><input/></td>
-</tr>
- 
-<tr>
-<td><input/></td>
-<td><input/></td>
-<td><input/></td>
-</tr>
- 
-</tbody>
- 
-</table>
- 
-<div className="bottom-zero">0.00</div>
- 
-</div>
- 
- 
-{/* RIGHT PANEL */}
- 
-<div className="right-panel">
- 
-<h3>Sales Summary</h3>
- 
-<table className="table">
- 
-<thead>
-<tr>
-<th>Paymode</th>
-<th>Manual Amount</th>
-</tr>
-</thead>
- 
-<tbody>
- 
-{salesSummary.map((item,i)=>(
-<tr key={i}>
-<td>{item.mode}</td>
-<td>
-<input
-value={item.amount}
-onChange={(e)=>{
- 
-let data=[...salesSummary]
-data[i].amount=e.target.value
-setSalesSummary(data)
- 
-}}
-/>
-</td>
-</tr>
-))}
- 
-</tbody>
- 
-</table>
- 
- 
-<div className="sales-box">
- 
-<h3>Sales</h3>
- 
-<table className="table">
- 
-<thead>
-<tr>
-<th>Paymode</th>
-<th>Amount</th>
-</tr>
-</thead>
- 
-<tbody>
- 
-<tr>
-<td>CASH</td>
-<td>44.50</td>
-</tr>
- 
-<tr>
-<td>NETS</td>
-<td>15.00</td>
-</tr>
- 
-<tr>
-<td>PAYNOW</td>
-<td>58.50</td>
-</tr>
- 
-</tbody>
- 
-</table>
- 
-</div>
- 
- 
-<div className="total-box">
- 
-Total
- 
-<input value="118.00" readOnly/>
- 
-</div>
- 
- 
-<button className="close-btn">
- 
-Close (Esc)
- 
-</button>
- 
-</div>
- 
-</div>
- 
-</div>
- 
-)
- 
+
+  const navigate = useNavigate();
+
+  const [dateTime, setDateTime] = useState("");
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = new Date();
+      const formatted =
+        now.toLocaleDateString() + " " + now.toLocaleTimeString();
+      setDateTime(formatted);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+  fetchData();
+}, []);
+
+const fetchData = async () => {
+  try {
+    const res = await axios.get(`${BASE_URL}/api/total-sales/SR`);
+
+    setSettlement({
+      SubTotal: res.data.SubTotal,
+      DiscountAmount: res.data.DiscountAmount,
+      ServiceCharge: res.data.ServiceCharge,
+      TotalTax: res.data.TotalTax,
+      RoundedBy: res.data.RoundedBy,
+      Tips: res.data.Tips,
+      TotalPax: res.data.InvoiceCount,
+    });
+
+  } catch (err) {
+    console.error("API Error ❌", err);
+  }
+};
+
+  // ✅ UPDATED: Smart close (back + fallback to home)
+  const handleClose = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate("/home", { replace: true });
+    }
+  };
+
+  // ✅ UPDATED: ESC key navigation (same logic)
+  useEffect(() => {
+    const handleEsc = (event) => {
+      if (event.key === "Escape") {
+        if (window.history.length > 1) {
+          navigate(-1);
+        } else {
+          navigate("/home", { replace: true });
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleEsc);
+
+    return () => window.removeEventListener("keydown", handleEsc);
+  }, [navigate]);
+
+  const [settlement, setSettlement] = useState({
+    SysAmount: 0,
+    ManualAmount: 0,
+    TotalTax: 0,
+    ServiceCharge: 0,
+    DiscountAmount: 0,
+    SubTotal: 0,
+    RoundedBy: 0,
+    Tips: 0,
+    TotalPax: 0,
+    VoidAmount: 0,
+  });
+
+  const [transactions, setTransactions] = useState([
+    { Paymode: "CASH", CashIn: 0, CashOut: 0 },
+    { Paymode: "NETS", CashIn: 0, CashOut: 0 },
+    { Paymode: "PAYNOW", CashIn: 0, CashOut: 0 },
+  ]);
+
+  const [salesSummary, setSalesSummary] = useState([
+    { Paymode: "CASH", ManualAmount: 0 },
+    { Paymode: "NETS", ManualAmount: 0 },
+    { Paymode: "PAYNOW", ManualAmount: 0 },
+  ]);
+
+  const handleSettlementChange = (e) => {
+    const { name, value } = e.target;
+    setSettlement({ ...settlement, [name]: value });
+  };
+
+  const handleTransactionChange = (index, field, value) => {
+    const data = [...transactions];
+    data[index][field] = value;
+    setTransactions(data);
+  };
+
+  const handleSalesChange = (index, value) => {
+    const data = [...salesSummary];
+    data[index].ManualAmount = value;
+    setSalesSummary(data);
+  };
+
+   const saveSettlement = async () => {
+  try {
+    const payload = {
+      terminal: "SR",
+      userId: "123",
+      settlement,
+      transactions,
+      salesSummary,
+    };
+
+    await axios.post(
+  `${BASE_URL}/api/settlement`,
+  payload
+);
+
+    alert("Saved Successfully ✅");
+
+  } catch (err) {
+    console.error("Save Error ❌", err);
+  }
+};
+
+  const netSales = () => {
+    return (
+      parseFloat(settlement.SubTotal || 0) +
+      parseFloat(settlement.ServiceCharge || 0) +
+      parseFloat(settlement.TotalTax || 0) +
+      parseFloat(settlement.RoundedBy || 0) +
+      parseFloat(settlement.Tips || 0) -
+      parseFloat(settlement.DiscountAmount || 0)
+    ).toFixed(2);
+  };
+
+  return (
+    <div className="cashier-container">
+      <h2>Cashier Settlement</h2>
+
+      <div className="top-row">
+        <label>Terminal</label>
+        <select>
+          <option value="SR">SR</option>
+        </select>
+
+        <input value={dateTime} readOnly />
+      </div>
+
+      <div className="main-grid">
+        {/* LEFT PANEL */}
+        <div className="left-panel">
+          <table className="summary-table">
+            <tbody>
+              {[
+                { label: "Sales Total", field: "SubTotal" },
+                { label: "Total Discount", field: "DiscountAmount" },
+                { label: "Service Charge", field: "ServiceCharge" },
+                { label: "GST", field: "TotalTax" },
+                { label: "Round Off", field: "RoundedBy" },
+                { label: "Tips", field: "Tips" },
+                { label: "Number Of Guests", field: "TotalPax" },
+                { label: "Void", field: "VoidAmount" },
+              ].map((item, i) => (
+                <tr key={i}>
+                  <td>{item.label}</td>
+                  <td>
+                    <input
+                      name={item.field}
+                      value={settlement[item.field]}
+                      onChange={handleSettlementChange}
+                    />
+                  </td>
+                </tr>
+              ))}
+
+              <tr className="bold">
+                <td>Net Sales</td>
+                <td>
+                  <input name="NetSales" value={netSales()} readOnly />
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          <h3>Transactions</h3>
+
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Paymode</th>
+                <th>Cash In</th>
+                <th>Cash Out</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {transactions.map((tran, i) => (
+                <tr key={i}>
+                  <td>{tran.Paymode}</td>
+
+                  <td>
+                    <input
+                      value={tran.CashIn}
+                      onChange={(e) =>
+                        handleTransactionChange(i, "CashIn", e.target.value)
+                      }
+                    />
+                  </td>
+
+                  <td>
+                    <input
+                      value={tran.CashOut}
+                      onChange={(e) =>
+                        handleTransactionChange(i, "CashOut", e.target.value)
+                      }
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <div className="bottom-zero">0.00</div>
+        </div>
+
+        {/* RIGHT PANEL */}
+        <div className="right-panel">
+          <h3>Sales Summary</h3>
+
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Paymode</th>
+                <th>Manual Amount</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {salesSummary.map((item, i) => (
+                <tr key={i}>
+                  <td>{item.Paymode}</td>
+                  <td>
+                    <input
+                      value={item.ManualAmount}
+                      onChange={(e) =>
+                        handleSalesChange(i, e.target.value)
+                      }
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <div className="sales-box">
+            <h3>Sales</h3>
+
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Paymode</th>
+                  <th>Amount</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {salesSummary.map((item, i) => (
+                  <tr key={i}>
+                    <td>{item.Paymode}</td>
+                    <td>{item.ManualAmount}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="total-box">
+            Total
+            <input
+              value={salesSummary
+                .reduce((acc, cur) => acc + parseFloat(cur.ManualAmount || 0), 0)
+                .toFixed(2)}
+              readOnly
+            />
+          </div>
+
+          {/* ✅ UPDATED CLOSE BUTTON */}
+          <button className="close-btn" onClick={handleClose}>
+            Close (Esc)
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
