@@ -41,6 +41,10 @@ app.use("/settlement", settlementRoutes);
 
 app.use("/images", express.static(path.join(__dirname, "images")));
 
+const userGroupRoutes = require("./routes/usergroup");
+
+app.use("/api/usergroup", userGroupRoutes);
+
 /* ------------------- GET ALL KITCHENS ------------------- */
 app.get("/kitchen", async (req, res) => {
   try {
