@@ -73,7 +73,7 @@ router.get("/total-sales/:terminal", async (req, res) => {
 });
 
 // 🔥 GET PAYMENT DETAILS
-router.get("/payment/:terminal", async (req, res) => {
+/*router.get("/payment/:terminal", async (req, res) => {
   try {
     const pool = await poolPromise;
 
@@ -96,7 +96,7 @@ router.get("/payment/:terminal", async (req, res) => {
   } catch (err) {
     res.status(500).send(err.message);
   }
-});
+});*/
 
 // 🔥 CHECK PENDING ORDERS
 router.get("/pending-orders", async (req, res) => {
