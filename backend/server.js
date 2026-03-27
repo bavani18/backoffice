@@ -18,6 +18,8 @@ const corsOptions = {
   credentials: true,
 };
 
+
+
 app.use(cors(corsOptions));
 
 app.use(express.json({ limit: "10mb" }));
@@ -44,6 +46,10 @@ app.use("/images", express.static(path.join(__dirname, "images")));
 const userGroupRoutes = require("./routes/usergroup");
 
 app.use("/api/usergroup", userGroupRoutes);
+
+const permissionRoutes = require("./routes/Permission");
+
+app.use("/api", permissionRoutes);
 
 /* ------------------- GET ALL KITCHENS ------------------- */
 app.get("/kitchen", async (req, res) => {
@@ -256,7 +262,13 @@ const storage = multer.diskStorage({
     cb(null, Date.now() + "_" + file.originalname);
   },
 });
-const upload = multer({ storage });
+const upload = multer({
+  storage,
+  limits: {
+    fileSize: 10 * 1024 * 1024,   // ✅ 10MB image
+    fieldSize: 10 * 1024 * 1024   // ✅ FIX for "Field value too long"
+  }
+});
 
 // ---------------- GET ALL CATEGORIES ----------------
 app.get("/category", async (req, res) => {
@@ -383,7 +395,7 @@ CategoryName=@CategoryName,
 SortCode=@SortCode,
 isActive=@isActive,
 ShortName=@ShortName,
-
+ImageId = COALESCE(@ImageId, ImageId),  
 BackColor=@BackColor,
 ForeColor=@ForeColor,
 isKitchenPrint=@isKitchenPrint,
@@ -758,13 +770,13 @@ app.post("/dishgroup", upload.single("image"), async (req, res) => {
       DishGroupId,
       DishGroupCode,
       DishGroupName,
-      SordCode,
+      SortCode,
       isActive,
-      isDiscountAllowed,      // ✅ ADD HERE
-      isTaxAllowed,           // ✅ ADD HERE
-      isKitchenPrint,         // ✅ ADD HERE
-      isServiceCharge,        // ✅ ADD HERE
-      isMemberSalesAllowed,   // ✅ ADD HERE
+      isDiscountAllowed,      
+      isTaxAllowed,           
+      isKitchenPrint,         
+      isServiceCharge,        
+      isMemberSalesAllowed,   
       ShortName,
       CategoryId,
       KitchenSortCode,
@@ -805,7 +817,7 @@ const imageBuffer = fs.readFileSync(req.file.path);
         .input("DishGroupId", sql.UniqueIdentifier, dgId)
         .input("DishGroupCode", sql.VarChar(20), DishGroupCode)
         .input("DishGroupName", sql.VarChar(100), DishGroupName)
-        .input("SordCode", sql.Int, SordCode)
+        .input("SortCode", sql.Int, SortCode)
         .input("isActive", sql.Bit, isActive == 1)
         .input("isDiscountAllowed", sql.Bit, isDiscountAllowed == 1)
         .input("isTaxAllowed", sql.Bit, isTaxAllowed == 1)
@@ -822,7 +834,7 @@ const imageBuffer = fs.readFileSync(req.file.path);
          UPDATE DishGroupMaster SET
                 DishGroupCode=@DishGroupCode,
                 DishGroupName=@DishGroupName,
-                SordCode=@SordCode,
+                SortCode=@SortCode,
                 isActive=@isActive,
                 isDiscountAllowed=@isDiscountAllowed,
                 isTaxAllowed=@isTaxAllowed,
@@ -845,7 +857,7 @@ const imageBuffer = fs.readFileSync(req.file.path);
         .input("DishGroupId", sql.UniqueIdentifier, dgId)
         .input("DishGroupCode", sql.VarChar(20), DishGroupCode)
         .input("DishGroupName", sql.VarChar(100), DishGroupName)
-        .input("SordCode", sql.Int, SordCode)
+        .input("SortCode", sql.Int, SortCode)
         .input("isActive", sql.Bit, isActive == 1)
         .input("isDiscountAllowed", sql.Bit, isDiscountAllowed == 1)
         .input("isTaxAllowed", sql.Bit, isTaxAllowed == 1)
@@ -858,14 +870,14 @@ const imageBuffer = fs.readFileSync(req.file.path);
         .input("BackColor", sql.VarChar(50), BackColor)
         .input("ForeColor", sql.VarChar(50), ForeColor)
         .input("ImageId", sql.UniqueIdentifier, imageId)
-        .input("KitchenType", sql.VarChar(50), d.KitchenType || "")
-.input("SubkitchenType", sql.VarChar(50), d.SubkitchenType || "")
+       .input("KitchenType", sql.VarChar(50), "")
+       .input("SubkitchenType", sql.VarChar(50), "")
         .query(`
           INSERT INTO DishGroupMaster
-          (DishGroupId,DishGroupCode,DishGroupName,SordCode,isActive,ShortName,CategoryId,KitchenSortCode,BackColor,ForeColor,ImageId,isDiscountAllowed,
+          (DishGroupId,DishGroupCode,DishGroupName,SortCode,isActive,ShortName,CategoryId,KitchenSortCode,BackColor,ForeColor,ImageId,isDiscountAllowed,
           isTaxAllowed,isKitchenPrint,isServiceCharge,isMemberSalesAllowed,KitchenType, SubkitchenType)
           VALUES
-          (@DishGroupId,@DishGroupCode,@DishGroupName,@SordCode,@isActive,@ShortName,@CategoryId,@KitchenSortCode,@BackColor,@ForeColor,@ImageId,@isDiscountAllowed,
+          (@DishGroupId,@DishGroupCode,@DishGroupName,@SortCode,@isActive,@ShortName,@CategoryId,@KitchenSortCode,@BackColor,@ForeColor,@ImageId,@isDiscountAllowed,
           @isTaxAllowed,@isKitchenPrint,@isServiceCharge,@isMemberSalesAllowed,@KitchenType,@SubkitchenType)
         `);
     }
