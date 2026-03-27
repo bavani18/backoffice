@@ -47,8 +47,8 @@ const userGroupRoutes = require("./routes/usergroup");
 
 app.use("/api/usergroup", userGroupRoutes);
 
-const permissionRoutes = require("./routes/permissionRoutes");
-app.use("/api", permissionRoutes);
+// const permissionRoutes = require("./routes/permissionRoutes");
+// app.use("/api", permissionRoutes);
 
 /* ------------------- GET ALL KITCHENS ------------------- */
 app.get("/kitchen", async (req, res) => {
