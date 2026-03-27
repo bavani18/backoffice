@@ -383,7 +383,7 @@ CategoryName=@CategoryName,
 SortCode=@SortCode,
 isActive=@isActive,
 ShortName=@ShortName,
-ImageId = COALESCE(@ImageId, ImageId),
+
 BackColor=@BackColor,
 ForeColor=@ForeColor,
 isKitchenPrint=@isKitchenPrint,
