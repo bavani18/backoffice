@@ -1,12 +1,76 @@
 const express = require("express");
 const router = express.Router();
 const { sql, poolPromise } = require("../db");
-
-
+const { Route } = require("react-router-dom");
+const { Router } = require("express");
+/* ===============================
+   FORM GROUPS
+================================*/
+router.get("/form-groups", async (req, res) => {
+  try {
+    const pool = await poolPromise;
+    const result = await pool.request().query(`
+      SELECT DISTINCT FormGroupCode FROM Forms
+    `);
+    res.json(result.recordset);
+  } catch (err) {
+    console.error("FORM GROUP ERROR:", err.message);
+    res.status(500).send(err.message);
+  }
+});
+ 
+/* ===============================
+   USER GROUPS (FOR DROPDOWN)
+================================*/
+router.get("/user-groups", async (req, res) => {
+  try {
+    const pool = await poolPromise;
+ 
+    const result = await pool.request().query(`
+      SELECT
+        UserGroupCode,
+        UserGroupName
+      FROM UserGroupMaster
+      WHERE isActive = 1
+      ORDER BY UserGroupCode
+    `);
+ 
+    res.json(result.recordset);
+ 
+  } catch (err) {
+    console.error("USER GROUP ERROR:", err.message);
+    res.status(500).send(err.message);
+  }
+});
+ 
+ 
+ 
+// ==============================
+// 🔥 GET FORM GROUPS
+// ==============================
+router.get("/form-groups", async (req, res) => {
+  try {
+    const pool = await poolPromise;
+ 
+    const result = await pool.request().query(`
+      SELECT DISTINCT FormGroupCode
+      FROM Forms
+      ORDER BY FormGroupCode
+    `);
+ 
+    res.json(result.recordset);
+ 
+  } catch (err) {
+    console.error(err);
+    res.status(500).send(err.message);
+  }
+});
+ 
+ 
 /* ===============================
    GET PERMISSIONS
 ================================*/
-router.get("/permission/:groupCode", async (req, res) => {
+router.get("/permissions/:groupCode", async (req, res) => {
   try {
     const pool = await poolPromise;
  
@@ -49,7 +113,7 @@ AND (
 /* ===============================
    UPDATE PERMISSIONS 🔥
 ================================*/
-router.post("/permission/update", async (req, res) => {
+router.post("/permissions/update", async (req, res) => {
   try {
     const pool = await poolPromise;
  
@@ -105,5 +169,5 @@ router.post("/permission/update", async (req, res) => {
     res.status(500).send(err.message);
   }
 });
- 
 module.exports = router;
+ 
