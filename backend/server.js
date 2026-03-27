@@ -47,8 +47,7 @@ const userGroupRoutes = require("./routes/usergroup");
 
 app.use("/api/usergroup", userGroupRoutes);
 
-const permissionRoutes = require("./routes/permission");
-
+const permissionRoutes = require("./routes/permissionRoutes");
 app.use("/api", permissionRoutes);
 
 /* ------------------- GET ALL KITCHENS ------------------- */
