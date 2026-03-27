@@ -47,7 +47,7 @@ const userGroupRoutes = require("./routes/usergroup");
 
 app.use("/api/usergroup", userGroupRoutes);
 
-const permissionRoutes = require("./routes/Permission");
+const permissionRoutes = require("./routes/permission");
 
 app.use("/api", permissionRoutes);
 

@@ -6,7 +6,7 @@ const { sql, poolPromise } = require("../db");
 /* ===============================
    GET PERMISSIONS
 ================================*/
-router.get("/permissions/:groupCode", async (req, res) => {
+router.get("/permission/:groupCode", async (req, res) => {
   try {
     const pool = await poolPromise;
  
@@ -49,7 +49,7 @@ AND (
 /* ===============================
    UPDATE PERMISSIONS 🔥
 ================================*/
-router.post("/permissions/update", async (req, res) => {
+router.post("/permission/update", async (req, res) => {
   try {
     const pool = await poolPromise;
  
