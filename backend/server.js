@@ -50,6 +50,10 @@ app.use("/api/usergroup", userGroupRoutes);
 const dashboardRoutes = require("./routes/dashboard");
 
 app.use("/api", dashboardRoutes);
+
+const rewardRoutes = require("./routes/rewardRoutes");
+
+app.use("/api/rewardpoints", rewardRoutes);
 // const permissionRoutes = require("./routes/permissionRoutes");
 // app.use("/api", permissionRoutes);
 
