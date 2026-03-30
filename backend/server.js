@@ -1520,7 +1520,7 @@ app.put("/modifiermaster/:id", async (req, res) => {
           isDishPrice=@isDishPrice,
           DishCost=@DishCost,
           isOpenModifier=@isOpenModifier,
-          ModifyOn=@ModifyOn
+          ModifiedOn=@ModifiedOn
         WHERE ModifierId=@ModifierId
       `);
 
