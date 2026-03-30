@@ -1508,7 +1508,7 @@ app.put("/modifiermaster/:id", async (req, res) => {
       .input("isDishPrice", sql.Bit, isDishPrice ?? false)
       .input("DishCost", sql.Decimal(18,2), Number(DishCost) || 0)
       .input("isOpenModifier", sql.Bit, isOpenModifier ?? false)
-      .input("ModifiedOn", sql.DateTime, new Date())
+      .input("ModifyOn", sql.DateTime, new Date())
       .query(`
         UPDATE ModifierMaster SET
           ModifierCode=@ModifierCode,
@@ -1520,7 +1520,7 @@ app.put("/modifiermaster/:id", async (req, res) => {
           isDishPrice=@isDishPrice,
           DishCost=@DishCost,
           isOpenModifier=@isOpenModifier,
-          ModifiedOn=@ModifiedOn
+          ModifyOn=@ModifyOn
         WHERE ModifierId=@ModifierId
       `);
 
