@@ -224,7 +224,7 @@ router.put("/:id", async (req, res) => {
           Address1_Telephone1=@Address1_Telephone1,
           Address1_Telephone2=@Address1_Telephone2,
           GSTPercentage=@GSTPercentage,
-          StatusCode=@StatusCode
+          StatusCode=@StatusCode,
         WHERE VendorId=@VendorId
       `);
 
