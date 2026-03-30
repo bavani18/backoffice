@@ -1,8 +1,7 @@
 const express = require("express");
 const router = express.Router();
+
 const { sql, poolPromise } = require("../db");
-const { Route } = require("react-router-dom");
-const { Router } = require("express");
 /* ===============================
    FORM GROUPS
 ================================*/
@@ -43,28 +42,26 @@ router.get("/user-groups", async (req, res) => {
   }
 });
  
- 
- 
-// ==============================
+ // ==============================
 // 🔥 GET FORM GROUPS
 // ==============================
-router.get("/form-groups", async (req, res) => {
-  try {
-    const pool = await poolPromise;
+// router.get("/form-groups", async (req, res) => {
+//   try {
+//     const pool = await poolPromise;
  
-    const result = await pool.request().query(`
-      SELECT DISTINCT FormGroupCode
-      FROM Forms
-      ORDER BY FormGroupCode
-    `);
+//     const result = await pool.request().query(`
+//       SELECT DISTINCT FormGroupCode
+//       FROM Forms
+//       ORDER BY FormGroupCode
+//     `);
  
-    res.json(result.recordset);
+//     res.json(result.recordset);
  
-  } catch (err) {
-    console.error(err);
-    res.status(500).send(err.message);
-  }
-});
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).send(err.message);
+//   }
+// });
  
  
 /* ===============================
