@@ -137,7 +137,7 @@ router.post("/permissions/update", async (req, res) => {
           .query(`
             UPDATE UserPermission
   SET
-    AllowRead = @allow,
+    AllowRead = CASE WHEN @allow = 1 THEN 'R' ELSE 'N' END,
     AllowAdd = CASE WHEN @allow = 1 THEN 'A' ELSE 'N' END,
     AllowUpdate = CASE WHEN @allow = 1 THEN 'U' ELSE 'N' END,
     AllowDelete = CASE WHEN @allow = 1 THEN 'D' ELSE 'N' END
