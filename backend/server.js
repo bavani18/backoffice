@@ -59,8 +59,9 @@ const vendorRoutes = require("./routes/vendorRoutes");
  
 // 🔥 USE ROUTES
 app.use("/api/vendor", vendorRoutes);
-// const permissionRoutes = require("./routes/permissionRoutes");
-// app.use("/api", permissionRoutes);
+
+const permissionRoutes = require("./routes/permissionRoutes");
+app.use("/api", permissionRoutes);
 
 /* ------------------- GET ALL KITCHENS ------------------- */
 app.get("/kitchen", async (req, res) => {
