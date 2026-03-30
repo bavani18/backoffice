@@ -85,7 +85,7 @@ SELECT
   f.FormCode,
   f.FormDescription,
   CASE
-     WHEN u.AllowRead = 1 THEN 1
+     WHEN u.AllowRead = R THEN 1
     ELSE 0
   END AS AllowRead
 FROM UserPermission u
@@ -133,7 +133,7 @@ router.post("/permissions/update", async (req, res) => {
         await pool.request()
           .input("group", sql.VarChar, userGroup)
           .input("form", sql.VarChar, item.formCode)
-          .input("allow", sql.Bit, item.allow ? 1 : 0)   // ✅ FIX
+          .input("allow", sql.VarChar, item.allow ? 1 : 0)   // ✅ FIX
           .query(`
             UPDATE UserPermission
   SET
