@@ -35,20 +35,55 @@ router.get("/:id", async (req, res) => {
 
 
 // ================== ➕ CREATE ==================
-router.post("/", async (req, res) => {
+ router.post("/", async (req, res) => {
   try {
     const pool = await poolPromise;
 
-    const { InventoryCode, Description, Price } = req.body;
+    const {
+      InventoryCode,
+      Description,
+      InventoryGroup,
+      BrandId,
+      Uom,
+      Price,
+      GrossCost,
+      CurrentCost,
+      QuantityOnHand,
+      IsActive,
+      SordCode,
+      ShortName,
+      isDiscountAllowed,
+      VendorId
+    } = req.body;
 
     await pool.request()
       .input("InventoryId", sql.UniqueIdentifier, require("crypto").randomUUID())
       .input("InventoryCode", sql.VarChar, InventoryCode)
-      .input("Description", sql.VarChar, Description)
-      .input("Price", sql.Decimal(18,2), Price)
+      .input("Description", sql.NVarChar, Description)
+      .input("InventoryGroup", sql.VarChar, InventoryGroup)
+      .input("BrandId", sql.UniqueIdentifier, BrandId || null)
+      .input("Uom", sql.VarChar, Uom)
+      .input("Price", sql.Decimal(18,2), Price || 0)
+      .input("GrossCost", sql.Decimal(18,2), GrossCost || 0)
+      .input("CurrentCost", sql.Decimal(18,2), CurrentCost || 0)
+      .input("QuantityOnHand", sql.Decimal(18,2), QuantityOnHand || 0)
+      .input("IsActive", sql.Bit, IsActive ?? true)
+      .input("SordCode", sql.Numeric(18,0), SordCode || 0)
+      .input("ShortName", sql.VarChar, ShortName)
+      .input("isDiscountAllowed", sql.Bit, isDiscountAllowed ?? false)
+      .input("VendorId", sql.UniqueIdentifier, VendorId || null)
+
       .query(`
-        INSERT INTO InventoryMaster (InventoryId, InventoryCode, Description, Price, CreatedOn)
-        VALUES (@InventoryId, @InventoryCode, @Description, @Price, GETDATE())
+        INSERT INTO InventoryMaster (
+          InventoryId, InventoryCode, Description, InventoryGroup, BrandId,
+          Uom, Price, GrossCost, CurrentCost, QuantityOnHand,
+          IsActive, CreatedOn, SordCode, ShortName, isDiscountAllowed, VendorId
+        )
+        VALUES (
+          @InventoryId, @InventoryCode, @Description, @InventoryGroup, @BrandId,
+          @Uom, @Price, @GrossCost, @CurrentCost, @QuantityOnHand,
+          @IsActive, GETDATE(), @SordCode, @ShortName, @isDiscountAllowed, @VendorId
+        )
       `);
 
     res.json({ message: "✅ Created successfully" });
@@ -64,16 +99,55 @@ router.put("/:id", async (req, res) => {
   try {
     const pool = await poolPromise;
 
-    const { Description, Price } = req.body;
+    const {
+      Description,
+      InventoryGroup,
+      BrandId,
+      Uom,
+      Price,
+      GrossCost,
+      CurrentCost,
+      QuantityOnHand,
+      IsActive,
+      SordCode,
+      ShortName,
+      isDiscountAllowed,
+      VendorId
+    } = req.body;
 
     await pool.request()
       .input("id", sql.UniqueIdentifier, req.params.id)
-      .input("Description", sql.VarChar, Description)
-      .input("Price", sql.Decimal(18,2), Price)
+      .input("Description", sql.NVarChar, Description)
+      .input("InventoryGroup", sql.VarChar, InventoryGroup)
+      .input("BrandId", sql.UniqueIdentifier, BrandId || null)
+      .input("Uom", sql.VarChar, Uom)
+      .input("Price", sql.Decimal(18,2), Price || 0)
+      .input("GrossCost", sql.Decimal(18,2), GrossCost || 0)
+      .input("CurrentCost", sql.Decimal(18,2), CurrentCost || 0)
+      .input("QuantityOnHand", sql.Decimal(18,2), QuantityOnHand || 0)
+      .input("IsActive", sql.Bit, IsActive ?? true)
+      .input("SordCode", sql.Numeric(18,0), SordCode || 0)
+      .input("ShortName", sql.VarChar, ShortName)
+      .input("isDiscountAllowed", sql.Bit, isDiscountAllowed ?? false)
+      .input("VendorId", sql.UniqueIdentifier, VendorId || null)
+      .input("ModifiedOn", sql.DateTime, new Date())
+
       .query(`
         UPDATE InventoryMaster
         SET Description=@Description,
-            Price=@Price
+            InventoryGroup=@InventoryGroup,
+            BrandId=@BrandId,
+            Uom=@Uom,
+            Price=@Price,
+            GrossCost=@GrossCost,
+            CurrentCost=@CurrentCost,
+            QuantityOnHand=@QuantityOnHand,
+            IsActive=@IsActive,
+            SordCode=@SordCode,
+            ShortName=@ShortName,
+            isDiscountAllowed=@isDiscountAllowed,
+            VendorId=@VendorId,
+            ModifiedOn=@ModifiedOn
         WHERE InventoryId=@id
       `);
 
