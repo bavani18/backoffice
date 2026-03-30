@@ -54,6 +54,11 @@ app.use("/api", dashboardRoutes);
 const rewardRoutes = require("./routes/rewardRoutes");
 
 app.use("/api/rewardpoints", rewardRoutes);
+
+const vendorRoutes = require("./routes/vendorRoutes");
+ 
+// 🔥 USE ROUTES
+app.use("/vendor", vendorRoutes);
 // const permissionRoutes = require("./routes/permissionRoutes");
 // app.use("/api", permissionRoutes);
 
