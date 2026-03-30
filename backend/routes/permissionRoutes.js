@@ -84,10 +84,11 @@ SELECT
   RTRIM(LTRIM(f.FormGroupCode)) AS FormGroupCode,
   f.FormCode,
   f.FormDescription,
-  CASE
-     WHEN u.AllowRead = R THEN 1
-    ELSE 0
-  END AS AllowRead
+  u.AllowRead
+  // CASE
+  //    WHEN u.AllowRead = R THEN 1
+  //   ELSE 0
+  // END AS AllowRead
 FROM UserPermission u
 INNER JOIN Forms f
   ON u.FormCode = f.FormCode
