@@ -85,10 +85,6 @@ SELECT
   f.FormCode,
   f.FormDescription,
   u.AllowRead
-  // CASE
-  //    WHEN u.AllowRead = R THEN 1
-  //   ELSE 0
-  // END AS AllowRead
 FROM UserPermission u
 INNER JOIN Forms f
   ON u.FormCode = f.FormCode
