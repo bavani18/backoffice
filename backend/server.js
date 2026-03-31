@@ -43,10 +43,6 @@ app.use("/settlement", settlementRoutes);
 
 app.use("/images", express.static(path.join(__dirname, "images")));
 
-const userGroupRoutes = require("./routes/usergroup");
-
-app.use("/api/usergroup", userGroupRoutes);
-
 const dashboardRoutes = require("./routes/dashboard");
 
 app.use("/api", dashboardRoutes);
