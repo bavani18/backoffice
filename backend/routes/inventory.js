@@ -78,12 +78,12 @@ router.get("/:id", async (req, res) => {
         INSERT INTO InventoryMaster (
           InventoryId, InventoryCode, Description, InventoryGroup, BrandId,
           Uom, Price, GrossCost, CurrentCost, QuantityOnHand,
-          IsActive, CreatedOn, SordCode, ShortName, isDiscountAllowed, VendorId
+          IsActive, CreatedOn, SordCode, ShortName, isDiscountAllowed, VendorId,CreatedBy
         )
         VALUES (
           @InventoryId, @InventoryCode, @Description, @InventoryGroup, @BrandId,
           @Uom, @Price, @GrossCost, @CurrentCost, @QuantityOnHand,
-          @IsActive, GETDATE(), @SordCode, @ShortName, @isDiscountAllowed, @VendorId
+          @IsActive, GETDATE(), @SordCode, @ShortName, @isDiscountAllowed, @VendorId,@CreatedBy
         )
       `);
 
