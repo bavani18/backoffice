@@ -69,6 +69,12 @@ const login = require("./routes/login");
 
 app.use("/api", login);
 
+const paymodeRoutes = require("./routes/paymodeRoutes");
+app.use("/api/paymode", paymodeRoutes);
+
+const picklistRoutes = require("./routes/picklistRoutes");
+app.use("/api", picklistRoutes);
+
 /* ------------------- GET ALL KITCHENS ------------------- */
 app.get("/kitchen", async (req, res) => {
   try {
