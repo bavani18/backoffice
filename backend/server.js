@@ -67,7 +67,7 @@ app.use("/api/usergroup", userGroupRoutes);
 
 const login = require("./routes/login");
 
-app.use("/api/login", login);
+app.use("/api", login);
 
 /* ------------------- GET ALL KITCHENS ------------------- */
 app.get("/kitchen", async (req, res) => {
