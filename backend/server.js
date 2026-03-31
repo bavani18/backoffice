@@ -60,6 +60,9 @@ const vendorRoutes = require("./routes/vendorRoutes");
 // 🔥 USE ROUTES
 app.use("/api/vendor", vendorRoutes);
 
+const userRoutes = require("./routes/userRoutes");
+app.use("/api", userRoutes);
+
 const permissionRoutes = require("./routes/permissionRoutes");
 app.use("/api", permissionRoutes);
 
