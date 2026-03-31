@@ -168,7 +168,7 @@ app.post("/kitchen", async (req, res) => {
         INSERT INTO Kitchen
         (KitchenTypeId, KitchenTypeCode, KitchenTypeName, isActive, BusinessUnitId, CreatedBy, CreatedOn)
         VALUES
-        (@KitchenTypeId, @KitchenTypeCode, @KitchenTypeName, @isActive, @BusinessUnitId, @CreatedBy, @CreatedOn)
+        (@KitchenTypeId, @KitchenTypeCode, @KitchenTypeName, @isActive, @BusinessUnitId, @CreatedBy, GETDATE())
       `);
 
     // Update Autonumber
