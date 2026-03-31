@@ -56,22 +56,22 @@ router.get("/:id", async (req, res) => {
       VendorId
     } = req.body;
 
-    await pool.request()
-      .input("InventoryId", sql.UniqueIdentifier, require("crypto").randomUUID())
-      .input("InventoryCode", sql.VarChar, InventoryCode)
-      .input("Description", sql.NVarChar, Description)
-      .input("InventoryGroup", sql.VarChar, InventoryGroup)
-      .input("BrandId", sql.UniqueIdentifier, BrandId || null)
-      .input("Uom", sql.VarChar, Uom)
-      .input("Price", sql.Decimal(18,2), Price || 0)
-      .input("GrossCost", sql.Decimal(18,2), GrossCost || 0)
-      .input("CurrentCost", sql.Decimal(18,2), CurrentCost || 0)
-      .input("QuantityOnHand", sql.Decimal(18,2), QuantityOnHand || 0)
-      .input("IsActive", sql.Bit, IsActive ?? true)
-      .input("SordCode", sql.Numeric(18,0), SordCode || 0)
-      .input("ShortName", sql.VarChar, ShortName)
-      .input("isDiscountAllowed", sql.Bit, isDiscountAllowed ?? false)
-      .input("VendorId", sql.UniqueIdentifier, VendorId || null)
+   await pool.request()
+  .input("InventoryId", sql.UniqueIdentifier, require("crypto").randomUUID())
+  .input("InventoryCode", sql.VarChar, InventoryCode || "")
+  .input("Description", sql.NVarChar, Description || "")
+  .input("InventoryGroup", sql.VarChar, InventoryGroup || "")
+  .input("BrandId", sql.UniqueIdentifier, BrandId || "00000000-0000-0000-0000-000000000000")
+  .input("Uom", sql.VarChar, Uom || "NOS")
+  .input("Price", sql.Decimal(18,2), Price || 0)
+  .input("GrossCost", sql.Decimal(18,2), GrossCost || 0)
+  .input("CurrentCost", sql.Decimal(18,2), CurrentCost || 0)
+  .input("QuantityOnHand", sql.Decimal(18,2), QuantityOnHand || 0)
+  .input("IsActive", sql.Bit, IsActive ?? true)
+  .input("SordCode", sql.Numeric(18,0), SordCode || 0)
+  .input("ShortName", sql.VarChar, ShortName || "")
+  .input("isDiscountAllowed", sql.Bit, isDiscountAllowed ?? false)
+  .input("VendorId", sql.UniqueIdentifier, VendorId || "00000000-0000-0000-0000-000000000000")
 
       .query(`
         INSERT INTO InventoryMaster (
