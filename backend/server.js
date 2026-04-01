@@ -75,6 +75,9 @@ app.use("/api/paymode", paymodeRoutes);
 const picklistRoutes = require("./routes/picklistRoutes");
 app.use("/api", picklistRoutes);
 
+const settlementRoutes = require("./routes/settlementRoutes");
+app.use("/api/settlement", settlementRoutes);
+
 /* ------------------- GET ALL KITCHENS ------------------- */
 app.get("/kitchen", async (req, res) => {
   try {
