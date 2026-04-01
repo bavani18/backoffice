@@ -45,7 +45,7 @@ router.get("/totals/:terminal", async (req, res) => {
 });
 
 // ✅ TRANSACTION (NEW ADD)
-router.get("/transactions/:terminal/:userId", async (req, res) => {
+router.get("/payment/:terminal/:userId", async (req, res) => {
   const { terminal, userId } = req.params;
   const pool = await poolPromise;
 
@@ -53,11 +53,10 @@ router.get("/transactions/:terminal/:userId", async (req, res) => {
     .input("terminal", sql.VarChar, terminal)
     .input("userId", sql.VarChar, userId)
     .query(`
-      SELECT TransactionType, TransactionMode, Amount
-      FROM Transactions
-      WHERE UserId = @userId
-      AND TerminalCode = @terminal
-    `);
+      SELECT  SUM(Amount) AS Amount
+      FROM PaymentDetail
+      WHERE TerminalCode = @terminal
+   `);
 
   res.json(result.recordset);
 });
