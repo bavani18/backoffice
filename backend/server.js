@@ -81,6 +81,13 @@ app.use("/api/settlement", settlementRoutes);
 const terminalRoutes = require("./routes/terminalRoutes");
 app.use("/api/terminal", terminalRoutes);
 
+const customerRoutes = require("./routes/Customer");
+
+app.use("/api/customer", customerRoutes);
+
+const discountRoutes = require("./routes/discountRoutes");
+app.use("/api/discount", discountRoutes);
+
 /* ------------------- GET ALL KITCHENS ------------------- */
 app.get("/kitchen", async (req, res) => {
   try {
