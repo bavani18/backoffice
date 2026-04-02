@@ -88,6 +88,9 @@ app.use("/api/customer", customerRoutes);
 const discountRoutes = require("./routes/discountRoutes");
 app.use("/api/discount", discountRoutes);
 
+const emailRoutes = require("./routes/EmailSettings");
+ 
+app.use("/api/email-settings", emailRoutes);
 /* ------------------- GET ALL KITCHENS ------------------- */
 app.get("/kitchen", async (req, res) => {
   try {
