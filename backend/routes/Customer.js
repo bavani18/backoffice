@@ -104,7 +104,7 @@ router.post("/", async (req, res) => {
     FROM CustomerMaster
   `);
 
-  const newCode = codeResult.recordset[0].NewCustomerCode;
+  newCode = codeResult.recordset[0].NewCustomerCode;
 
       // ✅ INSERT
       await pool.request()
