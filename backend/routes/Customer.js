@@ -152,7 +152,11 @@ router.post("/", async (req, res) => {
         `);
     }
 
-    res.json({ message: "Saved Successfully", CustomerId: id });
+    res.json({ 
+  message: "Saved Successfully", 
+  CustomerId: id,
+  CustomerCode: newCode   // 🔥 ADD THIS
+});
 
   } catch (err) {
     console.log(err);
