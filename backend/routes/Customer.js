@@ -104,7 +104,11 @@ router.post("/", async (req, res) => {
     FROM CustomerMaster
   `);
 
-  newCode = codeResult.recordset[0].NewCustomerCode;
+  if (codeResult.recordset.length > 0) {
+      newCode = codeResult.recordset[0].NewCustomerCode;
+    } else {
+      newCode = "C-00000001"; // default
+    }
 
       // ✅ INSERT
       await pool.request()
