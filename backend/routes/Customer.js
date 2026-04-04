@@ -53,11 +53,13 @@ router.post("/", async (req, res) => {
 
     let id = CustomerId || uuidv4();
 
+    let newCode = null; 
+
     // 🔍 CHECK EXISTS
     const exists = await pool.request()
       .input("CustomerId", sql.UniqueIdentifier, id)
       .query(`
-        SELECT CustomerId 
+        SELECT * 
         FROM CustomerMaster 
         WHERE CustomerId=@CustomerId
       `);
