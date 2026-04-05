@@ -1,54 +1,76 @@
 const express = require("express");
 const router = express.Router();
-const sql = require("mssql");
+const { sql, poolPromise } = require("../db");
 
-// DB config
-const dbConfig = {
-  user: "your_user",
-  password: "your_password",
-  server: "localhost",
-  database: "your_db",
-  options: {
-    encrypt: false,
-    trustServerCertificate: true,
-  },
-};
 
-// 🔹 GET FireCourse by ID
-router.get("/:id", async (req, res) => {
+// ================= 🔥 GET ALL =================
+router.get("/", async (req, res) => {
   try {
-    await sql.connect(dbConfig);
-    const result = await sql.query(
-      `SELECT FireCourseId, FireCourseCode, FireCourseName 
-       FROM FireCourse WHERE FireCourseId = '${req.params.id}'`
-    );
+    const pool = await poolPromise;
 
-    res.json(result.recordset[0]);
+    const result = await pool.request()
+      .query(`
+        SELECT FireCourseId, FireCourseCode, FireCourseName 
+        FROM FireCourse
+      `);
+
+    res.json(result.recordset);
   } catch (err) {
+    console.log(err);
     res.status(500).send("Server error");
   }
 });
 
-// 🔹 INSERT / UPDATE
+
+// ================= 🔹 GET BY ID =================
+router.get("/:id", async (req, res) => {
+  try {
+    const pool = await poolPromise;
+
+    const result = await pool.request()
+      .input("id", sql.VarChar, req.params.id)
+      .query(`
+        SELECT FireCourseId, FireCourseCode, FireCourseName 
+        FROM FireCourse 
+        WHERE FireCourseId=@id
+      `);
+
+    res.json(result.recordset[0]);
+  } catch (err) {
+    console.log(err);
+    res.status(500).send("Server error");
+  }
+});
+
+
+// ================= 🔹 INSERT / UPDATE =================
 router.post("/save", async (req, res) => {
-  const { id, code, name, userId } = req.body;
+  const { id, code, name } = req.body;
 
   try {
-    await sql.connect(dbConfig);
+    const pool = await poolPromise;
 
     if (id) {
       // UPDATE
-      await sql.query(`
-        UPDATE FireCourse 
-        SET FireCourseCode='${code}', FireCourseName='${name}'
-        WHERE FireCourseId='${id}'
-      `);
+      await pool.request()
+        .input("id", sql.VarChar, id)
+        .input("code", sql.VarChar, code)
+        .input("name", sql.VarChar, name)
+        .query(`
+          UPDATE FireCourse 
+          SET FireCourseCode=@code, 
+              FireCourseName=@name
+          WHERE FireCourseId=@id
+        `);
     } else {
       // INSERT
-      await sql.query(`
-        INSERT INTO FireCourse (FireCourseCode, FireCourseName)
-        VALUES ('${code}', '${name}')
-      `);
+      await pool.request()
+        .input("code", sql.VarChar, code)
+        .input("name", sql.VarChar, name)
+        .query(`
+          INSERT INTO FireCourse (FireCourseCode, FireCourseName)
+          VALUES (@code, @name)
+        `);
     }
 
     res.json({ success: true });
