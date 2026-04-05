@@ -85,6 +85,10 @@ const customerRoutes = require("./routes/Customer");
 
 app.use("/api/customer", customerRoutes);
 
+// 🔥 FireCourse Route connect
+const firecourseRoutes = require("./routes/firecourse");
+app.use("/api/firecourse", firecourseRoutes);
+
 const discountRoutes = require("./routes/discountRoutes");
 app.use("/api/discount", discountRoutes);
 
