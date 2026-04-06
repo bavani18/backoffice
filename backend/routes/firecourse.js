@@ -68,9 +68,9 @@ router.post("/save", async (req, res) => {
         .input("code", sql.VarChar, code)
         .input("name", sql.VarChar, name)
         .query(`
-          INSERT INTO FireCourse (FireCourseCode, FireCourseName)
-          VALUES (@code, @name)
-        `);
+        INSERT INTO FireCourse (FireCourseId, FireCourseCode, FireCourseName)
+        VALUES (NEWID(), @code, @name)
+      `);
     }
 
     res.json({ success: true });
