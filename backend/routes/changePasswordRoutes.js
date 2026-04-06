@@ -34,6 +34,10 @@ router.post("/", async (req, res) => {
     // 🔓 Decode password
     const decodedPassword = Buffer.from(dbPassword, "base64").toString("utf-8");
 
+    console.log("DB Password RAW:", dbPassword);
+    console.log("DB Password DECODED:", decodedPassword);
+    console.log("Entered Password:", oldPassword);
+
     // ❌ Check old password
     if (decodedPassword.trim() !== oldPassword.trim()) {
      return res.status(400).json({ message: "Old password incorrect" });
