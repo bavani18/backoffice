@@ -80,4 +80,24 @@ router.post("/save", async (req, res) => {
   }
 });
 
+// ================= 🔹 DELETE =================
+router.delete("/:id", async (req, res) => {
+  try {
+    const pool = await poolPromise;
+
+    await pool.request()
+      .input("id", sql.VarChar, req.params.id)
+      .query(`
+        DELETE FROM FireCourse 
+        WHERE FireCourseId=@id
+      `);
+
+    res.json({ success: true });
+
+  } catch (err) {
+    console.log("🔥 DELETE ERROR:", err);
+    res.status(500).send(err.message);
+  }
+});
+
 module.exports = router;
