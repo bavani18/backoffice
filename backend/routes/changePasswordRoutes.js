@@ -35,8 +35,8 @@ router.post("/", async (req, res) => {
     const decodedPassword = Buffer.from(dbPassword, "base64").toString("utf-8");
 
     // ❌ Check old password
-    if (decodedPassword !== oldPassword) {
-      return res.status(400).json({ message: "Old password incorrect" });
+    if (decodedPassword.trim() !== oldPassword.trim()) {
+     return res.status(400).json({ message: "Old password incorrect" });
     }
 
     // 🔐 Encode new password
