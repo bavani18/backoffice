@@ -1,21 +1,22 @@
 const express = require("express");
 const router = express.Router();
 const { sql, poolPromise } = require("../db");
- 
+
 // CHANGE PASSWORD
 router.post("/", async (req, res) => {
   try {
     console.log("BODY:", req.body);
- 
+
     const { userId, oldPassword, newPassword } = req.body;
- 
+
+    // ✅ Validate input
     if (!userId || !oldPassword || !newPassword) {
-      return res.status(400).send("Missing fields");
+      return res.status(400).json({ message: "Missing fields" });
     }
- 
+
     const pool = await poolPromise;
- 
-    // 🔍 GET PASSWORD USING USERID (GUID)
+
+    // 🔍 Get user password
     const result = await pool.request()
       .input("userId", sql.UniqueIdentifier, userId)
       .query(`
@@ -23,25 +24,25 @@ router.post("/", async (req, res) => {
         FROM UserMaster
         WHERE UserId = @userId
       `);
- 
+
     if (result.recordset.length === 0) {
-      return res.status(404).send("User not found");
+      return res.status(404).json({ message: "User not found" });
     }
- 
+
     const dbPassword = result.recordset[0].UserPassword;
- 
-    // 🔥 DECODE BASE64 PASSWORD
+
+    // 🔓 Decode password
     const decodedPassword = Buffer.from(dbPassword, "base64").toString("utf-8");
- 
-    // ❌ CHECK OLD PASSWORD
+
+    // ❌ Check old password
     if (decodedPassword !== oldPassword) {
-      return res.status(400).send("Old password incorrect");
+      return res.status(400).json({ message: "Old password incorrect" });
     }
- 
-    // 🔥 ENCODE NEW PASSWORD
+
+    // 🔐 Encode new password
     const encodedNewPassword = Buffer.from(newPassword).toString("base64");
- 
-    // ✅ UPDATE PASSWORD
+
+    // ✅ Update password
     await pool.request()
       .input("userId", sql.UniqueIdentifier, userId)
       .input("newPassword", sql.VarChar, encodedNewPassword)
@@ -50,14 +51,14 @@ router.post("/", async (req, res) => {
         SET UserPassword = @newPassword
         WHERE UserId = @userId
       `);
- 
-    res.send("Password updated successfully ✅");
- 
+
+    // ✅ FINAL RESPONSE (ONLY HERE)
+    res.json({ message: "Password updated successfully ✅" });
+
   } catch (err) {
     console.error("CHANGE PASSWORD ERROR:", err.message);
-    res.status(500).send(err.message);
+    res.status(500).json({ message: err.message });
   }
 });
- 
+
 module.exports = router;
- 
