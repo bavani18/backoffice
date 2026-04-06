@@ -98,6 +98,9 @@ app.use("/api/email-settings", emailRoutes);
 
 const changePasswordRoutes = require("./routes/changePasswordRoutes");
 app.use("/api/change-password", changePasswordRoutes);
+
+const priceListRoutes = require("./routes/priceListRoutes");
+app.use("/api/pricelist", priceListRoutes);
  
 /* ------------------- GET ALL KITCHENS ------------------- */
 app.get("/kitchen", async (req, res) => {
