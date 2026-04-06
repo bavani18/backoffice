@@ -8,11 +8,13 @@ router.post("/login", async (req, res) => {
     const username = req.body.username?.trim();
    const password = req.body.password?.trim();
 
+     const encodedPassword = Buffer.from(password).toString("base64");
+
     const pool = await poolPromise;
 
     const result = await pool.request()
       .input("username", sql.VarChar, username)
-      .input("password", sql.VarChar, password)
+      .input("password", sql.VarChar, encodedPassword)
       .query(`
         SELECT * FROM USERMASTER
         WHERE UserName = @username 

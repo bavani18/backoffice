@@ -32,16 +32,16 @@ router.post("/", async (req, res) => {
     const dbPassword = result.recordset[0].UserPassword;
 
     // 🔓 Decode password
-   const decodedPassword = dbPassword;
+   const encodedOldPassword = Buffer.from(oldPassword).toString("base64");
 
     console.log("DB Password RAW:", dbPassword);
     console.log("DB Password DECODED:", decodedPassword);
     console.log("Entered Password:", oldPassword);
 
     // ❌ Check old password
-    if (decodedPassword.trim() !== oldPassword.trim()) {
-     return res.status(400).json({ message: "Old password incorrect" });
-    }
+   if (dbPassword.trim() !== encodedOldPassword.trim()) {
+  return res.status(400).json({ message: "Old password incorrect" });
+}
 
     // 🔐 Encode new password
     const encodedNewPassword = Buffer.from(newPassword).toString("base64");
