@@ -35,7 +35,7 @@ router.post("/", async (req, res) => {
    const encodedOldPassword = Buffer.from(oldPassword).toString("base64");
 
     console.log("DB Password RAW:", dbPassword);
-    console.log("DB Password DECODED:", decodedPassword);
+    console.log("Encoded Entered Password:", encodedOldPassword);
     console.log("Entered Password:", oldPassword);
 
     // ❌ Check old password
