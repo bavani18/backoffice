@@ -32,7 +32,7 @@ router.post("/", async (req, res) => {
     const dbPassword = result.recordset[0].UserPassword;
 
     // 🔓 Decode password
-    const decodedPassword = Buffer.from(dbPassword, "base64").toString("utf-8");
+   const decodedPassword = dbPassword;
 
     console.log("DB Password RAW:", dbPassword);
     console.log("DB Password DECODED:", decodedPassword);
