@@ -104,13 +104,13 @@ router.post("/", async (req, res) => {
           PrinterId, PrinterName, PrinterPath, PrinterIP,
           PrinterType, PrintSection,
           KitchenTypeName, KitchenTypeValue,
-          IsActive, PrintCopy, CreatedDate
+          IsActive, PrintCopy
         )
         VALUES (
           @PrinterId, @PrinterName, @PrinterPath, @PrinterIP,
           @PrinterType, @PrintSection,
           @KitchenTypeName, @KitchenTypeValue,
-          @IsActive, @PrintCopy, GETDATE()
+          @IsActive, @PrintCopy
         )
       `);
 
