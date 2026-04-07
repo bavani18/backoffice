@@ -2,6 +2,8 @@ const express = require("express");
 const router = express.Router();
 const { sql, poolPromise } = require("../db");
 
+const { v4: uuidv4 } = require("uuid");
+
 
 // 🔹 GET ALL PRINTERS
 router.get("/", async (req, res) => {
