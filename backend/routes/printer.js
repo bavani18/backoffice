@@ -89,7 +89,7 @@ router.post("/", async (req, res) => {
     const pool = await poolPromise;
 
     await pool.request()
-      .input("PrinterId", sql.VarChar, PrinterId)
+      .input("PrinterId", sql.VarChar, uuidv4()) 
       .input("PrinterName", sql.VarChar, PrinterName)
       .input("PrinterPath", sql.VarChar, PrinterPath)
       .input("PrinterIP", sql.VarChar, PrinterIP)
