@@ -1,20 +1,19 @@
 const express = require("express");
 const router = express.Router();
- 
-// 🔥 IMPORTANT CHANGE
 const { sql, poolPromise } = require("../db");
  
  
 // 🔹 GET all price lists
 router.get("/", async (req, res) => {
   try {
-    const pool = await poolPromise; // ✅ FIX
+    const pool = await poolPromise;
  
-    const result = await pool.request().query(`
-      SELECT PriceListId, Name, Description, SortCode, IsActive
-      FROM PriceListMaster
-      ORDER BY SortCode, Name
-    `);
+    const result = await pool.request()
+      .query(`
+        SELECT *
+        FROM PriceListMaster
+        ORDER BY SortCode
+      `);
  
     res.json(result.recordset);
  
@@ -26,12 +25,19 @@ router.get("/", async (req, res) => {
  
  
 // 🔹 GET by ID
-router.get("/:id", async (req, res) => {
+router.get("/by-id/:id", async (req, res) => {
   try {
-    const pool = await poolPromise; // ✅ FIX
+    const pool = await poolPromise;
+    const id = req.params.id;
+ 
+    const isValidGUID = /^[0-9a-fA-F-]{36}$/.test(id);
+ 
+    if (!isValidGUID) {
+      return res.status(400).send("Invalid ID format");
+    }
  
     const result = await pool.request()
-      .input("id", sql.VarChar, req.params.id) // ✅ SAFE
+      .input("id", sql.UniqueIdentifier, id)
       .query(`
         SELECT * FROM PriceListMaster
         WHERE PriceListId = @id
@@ -40,68 +46,132 @@ router.get("/:id", async (req, res) => {
     res.json(result.recordset[0]);
  
   } catch (err) {
-    res.status(500).send(err.message);
-  }
-});
- 
- 
-// 🔹 CREATE / UPDATE
-router.post("/", async (req, res) => {
-  const {
-    PriceListId,
-    Name,
-    Description,
-    SortCode,
-    IsActive,
-    CreatedBy
-  } = req.body;
- 
-  try {
-    const pool = await poolPromise; // ✅ FIX
- 
-    await pool.request()
-      .input("PriceListId", sql.VarChar, PriceListId)
-      .input("Name", sql.VarChar, Name)
-      .input("Description", sql.VarChar, Description)
-      .input("SortCode", sql.Int, SortCode)
-      .input("IsActive", sql.Bit, IsActive)
-      .input("CreatedBy", sql.VarChar, CreatedBy)
-      .query(`
-        MERGE PriceListMaster AS target
-        USING (SELECT @PriceListId AS PriceListId) AS source
-        ON target.PriceListId = source.PriceListId
- 
-        WHEN MATCHED THEN
-          UPDATE SET
-            Name = @Name,
-            Description = @Description,
-            SortCode = @SortCode,
-            IsActive = @IsActive
- 
-        WHEN NOT MATCHED THEN
-          INSERT (
-            PriceListId, Name, Description, SortCode, IsActive,
-            CreatedDate, ExpiryDate, CreatedBy
-          )
-          VALUES (
-            @PriceListId,
-            @Name,
-            @Description,
-            @SortCode,
-            @IsActive,
-            GETDATE(),
-            DATEADD(YEAR, 2, GETDATE()),
-            @CreatedBy
-          );
-      `);
- 
-    res.send("✅ Saved successfully");
- 
-  } catch (err) {
     console.error(err);
     res.status(500).send(err.message);
   }
 });
  
-module.exports = router;
+ 
+router.post("/", async (req, res) => {
+  const {
+    Name,
+    Description,
+    SortCode,
+    IsActive
+  } = req.body;
+ 
+  try {
+    const pool = await poolPromise;
+ 
+    await pool.request()
+      .input("Name", sql.VarChar, Name)
+      .input("Description", sql.VarChar, Description)
+      .input("SortCode", sql.Int, SortCode)
+      .input("IsActive", sql.Bit, IsActive)
+      .query(`
+ 
+        IF EXISTS (
+          SELECT 1 FROM PriceListMaster WHERE Name = @Name
+        )
+        BEGIN
+          -- 🔄 UPDATE
+          UPDATE PriceListMaster
+          SET
+            Description = @Description,
+            SortCode = @SortCode,
+            IsActive = @IsActive,
+            ModifiedBy = NEWID(),
+            ModifiedOn = GETDATE()
+          WHERE Name = @Name
+        END
+        ELSE
+        BEGIN
+          -- ➕ INSERT
+          INSERT INTO PriceListMaster
+          (
+            PriceListId,
+            Name,
+            Description,
+            BeginDate,
+            EndDate,
+            IsActive,
+            CreatedBy,
+            CreatedOn,
+            SortCode,
+            ExpiryDate
+          )
+          VALUES
+          (
+            NEWID(),
+            @Name,
+            @Description,
+            GETDATE(),
+            DATEADD(YEAR, 2, GETDATE()),
+            @IsActive,
+            NEWID(),
+            GETDATE(),
+            @SortCode,
+            DATEADD(YEAR, 2, GETDATE())
+          )
+        END
+ 
+      `);
+ 
+    res.send("✅ Saved / Updated successfully");
+ 
+  } catch (err) {
+    console.error("UPSERT ERROR:", err.message);
+    res.status(500).send(err.message);
+  }
+});
+ 
+// 🔹 UPDATE PRICE LIST
+router.put("/:id", async (req, res) => {
+  try {
+    const pool = await poolPromise;
+ 
+    const id = req.params.id;
+ 
+    const {
+      Name,
+      Description,
+      SortCode,
+      IsActive
+    } = req.body;
+ 
+    // ✅ ID validation
+    const isValidGUID = /^[0-9a-fA-F-]{36}$/.test(id);
+ 
+    if (!isValidGUID) {
+      return res.status(400).send("Invalid ID format");
+    }
+ 
+    await pool.request()
+      .input("id", sql.UniqueIdentifier, id)
+      .input("Name", sql.VarChar, Name)
+      .input("Description", sql.VarChar, Description)
+      .input("SortCode", sql.Int, SortCode)
+      .input("IsActive", sql.Bit, IsActive)
+      .query(`
+        UPDATE PriceListMaster
+        SET
+          Name = @Name,
+          Description = @Description,
+          SortCode = @SortCode,
+          IsActive = @IsActive,
+          ModifiedBy = NEWID(), -- ✅ safe fix
+          ModifiedOn = GETDATE()
+        WHERE PriceListId = @id
+      `);
+ 
+    res.send("✅ Updated successfully");
+ 
+  } catch (err) {
+    console.error("UPDATE ERROR:", err.message);
+    res.status(500).send(err.message);
+  }
+});
+ 
+module. Exports = router;
+
  
