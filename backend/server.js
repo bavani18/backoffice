@@ -106,7 +106,11 @@ const printerRoutes = require("./routes/printer");
 
 app.use("/api/printer", printerRoutes);
 
-;
+const barcodeRoutes = require("./routes/barcodeRoutes");
+ 
+app.use("/api/barcode", barcodeRoutes);
+
+
 /* ------------------- GET ALL KITCHENS ------------------- */
 app.get("/kitchen", async (req, res) => {
   try {
