@@ -45,7 +45,6 @@ router.get("/:id", async (req, res) => {
           PT.PickListValue AS PrinterTypeName,
           PM.PrintSection,
           PS.PickListValue AS PrintSectionName,
-          PM.KitchenTypeName,
           PM.KitchenTypeValue,
           PM.IsActive,
           PM.PrintCopy
@@ -82,7 +81,7 @@ router.post("/", async (req, res) => {
       PrinterIP,
       PrinterType,
       PrintSection,
-      KitchenTypeName,
+      // KitchenTypeName,
       KitchenTypeValue,
       IsActive,
       PrintCopy
@@ -97,7 +96,7 @@ router.post("/", async (req, res) => {
       .input("PrinterIP", sql.VarChar, PrinterIP)
       .input("PrinterType", sql.Int, PrinterType)
       .input("PrintSection", sql.Int, PrintSection)
-      .input("KitchenTypeName", sql.VarChar, KitchenTypeName)
+      // .input("KitchenTypeName", sql.VarChar, KitchenTypeName)
       .input("KitchenTypeValue", sql.VarChar, KitchenTypeValue)
       .input("IsActive", sql.Bit, IsActive)
       .input("PrintCopy", sql.Int, PrintCopy)
@@ -105,13 +104,13 @@ router.post("/", async (req, res) => {
         INSERT INTO PrintMaster (
           PrinterId, PrinterName, PrinterPath, PrinterIP,
           PrinterType, PrintSection,
-          KitchenTypeName, KitchenTypeValue,
+          KitchenTypeValue,
           IsActive, PrintCopy
         )
         VALUES (
           @PrinterId, @PrinterName, @PrinterPath, @PrinterIP,
           @PrinterType, @PrintSection,
-          @KitchenTypeName, @KitchenTypeValue,
+          @KitchenTypeValue,
           @IsActive, @PrintCopy
         )
       `);
@@ -133,7 +132,7 @@ router.put("/:id", async (req, res) => {
       PrinterIP,
       PrinterType,
       PrintSection,
-      KitchenTypeName,
+      // KitchenTypeName,
       KitchenTypeValue,
       IsActive,
       PrintCopy
@@ -148,7 +147,7 @@ router.put("/:id", async (req, res) => {
       .input("PrinterIP", sql.VarChar, PrinterIP)
       .input("PrinterType", sql.Int, PrinterType)
       .input("PrintSection", sql.Int, PrintSection)
-      .input("KitchenTypeName", sql.VarChar, KitchenTypeName)
+      // .input("KitchenTypeName", sql.VarChar, KitchenTypeName)
       .input("KitchenTypeValue", sql.VarChar, KitchenTypeValue)
       .input("IsActive", sql.Bit, IsActive)
       .input("PrintCopy", sql.Int, PrintCopy)
@@ -159,7 +158,6 @@ router.put("/:id", async (req, res) => {
           PrinterIP = @PrinterIP,
           PrinterType = @PrinterType,
           PrintSection = @PrintSection,
-          KitchenTypeName = @KitchenTypeName,
           KitchenTypeValue = @KitchenTypeValue,
           IsActive = @IsActive,
           PrintCopy = @PrintCopy
@@ -191,6 +189,51 @@ router.delete("/:id", async (req, res) => {
   } catch (err) {
     res.status(500).send(err.message);
   }
+});
+
+// Printer Type
+router.get("/printer-type", async (req, res) => {
+  const pool = await poolPromise;
+
+  const result = await pool.request().query(`
+    SELECT PickListNumber, PickListValue
+    FROM PickListMaster
+    WHERE TableName = 'PrintMaster'
+    AND FieldName = 'PrinterType'
+    ORDER BY DisplayOrder
+  `);
+
+  res.json(result.recordset);
+});
+
+// Print Section
+router.get("/print-section", async (req, res) => {
+  const pool = await poolPromise;
+
+  const result = await pool.request().query(`
+    SELECT PickListNumber, PickListValue
+    FROM PickListMaster
+    WHERE TableName = 'PrintMaster'
+    AND FieldName = 'PrintSection'
+    ORDER BY DisplayOrder
+  `);
+
+  res.json(result.recordset);
+});
+
+// Kitchen Type
+router.get("/kitchen-type", async (req, res) => {
+  const pool = await poolPromise;
+
+  const result = await pool.request().query(`
+    SELECT PickListNumber, PickListValue
+    FROM PickListMaster
+    WHERE TableName = 'DishMaster'
+    AND FieldName = 'KitchenType'
+    ORDER BY DisplayOrder
+  `);
+
+  res.json(result.recordset);
 });
 
 module.exports = router;
