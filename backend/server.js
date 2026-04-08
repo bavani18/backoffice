@@ -100,11 +100,13 @@ const changePasswordRoutes = require("./routes/changePasswordRoutes");
 app.use("/api/change-password", changePasswordRoutes);
 
 const priceListRoutes = require("./routes/priceListRoutes");
-app.use("/api/pricelist", priceListRoutes);
+app.use("/api/pricelist", priceListRoutes)
  
 const printerRoutes = require("./routes/printer");
 
 app.use("/api/printer", printerRoutes);
+
+;
 /* ------------------- GET ALL KITCHENS ------------------- */
 app.get("/kitchen", async (req, res) => {
   try {
