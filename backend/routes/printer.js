@@ -88,7 +88,7 @@ router.get("/:id", async (req, res) => {
           PT.PickListValue AS PrinterTypeName,
           PM.PrintSection,
           PS.PickListValue AS PrintSectionName,
-          PM.KitchenTypeValue,
+          PM.KitchenTypeName,
           PM.IsActive,
           PM.PrintCopy
         FROM PrintMaster PM
@@ -122,7 +122,7 @@ router.post("/", async (req, res) => {
       PrinterIP,
       PrinterType,
       PrintSection,
-      KitchenTypeValue,
+      KitchenTypeName,
       IsActive,
       PrintCopy
     } = req.body;
@@ -136,20 +136,20 @@ router.post("/", async (req, res) => {
       .input("PrinterIP", sql.VarChar, PrinterIP)
       .input("PrinterType", sql.Int, PrinterType)
       .input("PrintSection", sql.Int, PrintSection)
-      .input("KitchenTypeValue", sql.VarChar, KitchenTypeValue)
+      .input("KitchenTypeName", sql.VarChar, KitchenTypeName)
       .input("IsActive", sql.Bit, IsActive)
       .input("PrintCopy", sql.Int, PrintCopy)
       .query(`
         INSERT INTO PrintMaster (
           PrinterId, PrinterName, PrinterPath, PrinterIP,
           PrinterType, PrintSection,
-          KitchenTypeValue,
+          KitchenTypeName,
           IsActive, PrintCopy
         )
         VALUES (
           @PrinterId, @PrinterName, @PrinterPath, @PrinterIP,
           @PrinterType, @PrintSection,
-          @KitchenTypeValue,
+          @KitchenTypeName,
           @IsActive, @PrintCopy
         )
       `);
@@ -170,7 +170,7 @@ router.put("/:id", async (req, res) => {
       PrinterIP,
       PrinterType,
       PrintSection,
-      KitchenTypeValue,
+      KitchenTypeName,
       IsActive,
       PrintCopy
     } = req.body;
@@ -184,7 +184,7 @@ router.put("/:id", async (req, res) => {
       .input("PrinterIP", sql.VarChar, PrinterIP)
       .input("PrinterType", sql.Int, PrinterType)
       .input("PrintSection", sql.Int, PrintSection)
-      .input("KitchenTypeValue", sql.VarChar, KitchenTypeValue)
+      .input("KitchenTypeName", sql.VarChar, KitchenTypeName)
       .input("IsActive", sql.Bit, IsActive)
       .input("PrintCopy", sql.Int, PrintCopy)
       .query(`
@@ -194,7 +194,7 @@ router.put("/:id", async (req, res) => {
           PrinterIP = @PrinterIP,
           PrinterType = @PrinterType,
           PrintSection = @PrintSection,
-          KitchenTypeValue = @KitchenTypeValue,
+          KitchenTypeName = @KitchenTypeName,
           IsActive = @IsActive,
           PrintCopy = @PrintCopy
         WHERE PrinterId = @PrinterId
