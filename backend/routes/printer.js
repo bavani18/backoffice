@@ -9,13 +9,28 @@ router.get("/", async (req, res) => {
     const pool = await poolPromise;
 
     const result = await pool.request().query(`
-      SELECT 
-        PrinterId,
-        PrinterName,
-        PrinterIP,
-        IsActive
-      FROM PrintMaster
-      ORDER BY PrinterName
+     SELECT 
+          PM.PrinterId,
+          PM.PrinterName,
+          PM.PrinterIP,
+          PM.IsActive,
+
+          PT.PickListValue AS PrinterTypeName,
+          PS.PickListValue AS PrintSectionName
+
+        FROM PrintMaster PM
+
+        LEFT JOIN PickListMaster PT 
+          ON PT.TableName = 'PrintMaster'
+          AND PT.FieldName = 'PrinterType'
+          AND PT.PickListNumber = PM.PrinterType
+
+        LEFT JOIN PickListMaster PS 
+          ON PS.TableName = 'PrintMaster'
+          AND PS.FieldName = 'PrintSection'
+          AND PS.PickListNumber = PM.PrintSection
+
+        ORDER BY PM.PrinterName
     `);
 
     res.json(result.recordset);
