@@ -1,9 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const { sql, poolPromise } = require("../db");
-
 const { v4: uuidv4 } = require("uuid");
-
 
 // 🔹 GET ALL PRINTERS
 router.get("/", async (req, res) => {
@@ -21,14 +19,59 @@ router.get("/", async (req, res) => {
     `);
 
     res.json(result.recordset);
-
   } catch (err) {
     res.status(500).send(err.message);
   }
 });
 
 
-// 🔹 GET BY ID (FULL DETAILS)
+// 🔥 ================= IMPORTANT CHANGE =================
+
+// ✅ FIRST → dropdown APIs
+router.get("/printer-type", async (req, res) => {
+  const pool = await poolPromise;
+
+  const result = await pool.request().query(`
+    SELECT PickListNumber, PickListValue
+    FROM PickListMaster
+    WHERE TableName = 'PrintMaster'
+    AND FieldName = 'PrinterType'
+    ORDER BY DisplayOrder
+  `);
+
+  res.json(result.recordset);
+});
+
+router.get("/print-section", async (req, res) => {
+  const pool = await poolPromise;
+
+  const result = await pool.request().query(`
+    SELECT PickListNumber, PickListValue
+    FROM PickListMaster
+    WHERE TableName = 'PrintMaster'
+    AND FieldName = 'PrintSection'
+    ORDER BY DisplayOrder
+  `);
+
+  res.json(result.recordset);
+});
+
+router.get("/kitchen-type", async (req, res) => {
+  const pool = await poolPromise;
+
+  const result = await pool.request().query(`
+    SELECT PickListNumber, PickListValue
+    FROM PickListMaster
+    WHERE TableName = 'DishMaster'
+    AND FieldName = 'KitchenType'
+    ORDER BY DisplayOrder
+  `);
+
+  res.json(result.recordset);
+});
+
+
+// 🔹 GET BY ID (FULL DETAILS) 🔥 NOW MOVED DOWN
 router.get("/:id", async (req, res) => {
   try {
     const pool = await poolPromise;
@@ -57,14 +100,13 @@ router.get("/:id", async (req, res) => {
 
         LEFT JOIN PickListMaster PS 
           ON PS.TableName = 'PrintMaster' 
-          AND PS.FieldName = 'PrintSection'
+          AND PT.FieldName = 'PrintSection'
           AND PS.PickListNumber = PM.PrintSection
 
         WHERE PM.PrinterId = @id
       `);
 
     res.json(result.recordset[0]);
-
   } catch (err) {
     res.status(500).send(err.message);
   }
@@ -75,13 +117,11 @@ router.get("/:id", async (req, res) => {
 router.post("/", async (req, res) => {
   try {
     const {
-      PrinterId,
       PrinterName,
       PrinterPath,
       PrinterIP,
       PrinterType,
       PrintSection,
-      // KitchenTypeName,
       KitchenTypeValue,
       IsActive,
       PrintCopy
@@ -96,7 +136,6 @@ router.post("/", async (req, res) => {
       .input("PrinterIP", sql.VarChar, PrinterIP)
       .input("PrinterType", sql.Int, PrinterType)
       .input("PrintSection", sql.Int, PrintSection)
-      // .input("KitchenTypeName", sql.VarChar, KitchenTypeName)
       .input("KitchenTypeValue", sql.VarChar, KitchenTypeValue)
       .input("IsActive", sql.Bit, IsActive)
       .input("PrintCopy", sql.Int, PrintCopy)
@@ -116,7 +155,6 @@ router.post("/", async (req, res) => {
       `);
 
     res.send("✅ Created Successfully");
-
   } catch (err) {
     res.status(500).send(err.message);
   }
@@ -132,7 +170,6 @@ router.put("/:id", async (req, res) => {
       PrinterIP,
       PrinterType,
       PrintSection,
-      // KitchenTypeName,
       KitchenTypeValue,
       IsActive,
       PrintCopy
@@ -147,7 +184,6 @@ router.put("/:id", async (req, res) => {
       .input("PrinterIP", sql.VarChar, PrinterIP)
       .input("PrinterType", sql.Int, PrinterType)
       .input("PrintSection", sql.Int, PrintSection)
-      // .input("KitchenTypeName", sql.VarChar, KitchenTypeName)
       .input("KitchenTypeValue", sql.VarChar, KitchenTypeValue)
       .input("IsActive", sql.Bit, IsActive)
       .input("PrintCopy", sql.Int, PrintCopy)
@@ -165,7 +201,6 @@ router.put("/:id", async (req, res) => {
       `);
 
     res.send("✅ Updated Successfully");
-
   } catch (err) {
     res.status(500).send(err.message);
   }
@@ -185,55 +220,9 @@ router.delete("/:id", async (req, res) => {
       `);
 
     res.send("✅ Deleted Successfully");
-
   } catch (err) {
     res.status(500).send(err.message);
   }
-});
-
-// Printer Type
-router.get("/printer-type", async (req, res) => {
-  const pool = await poolPromise;
-
-  const result = await pool.request().query(`
-    SELECT PickListNumber, PickListValue
-    FROM PickListMaster
-    WHERE TableName = 'PrintMaster'
-    AND FieldName = 'PrinterType'
-    ORDER BY DisplayOrder
-  `);
-
-  res.json(result.recordset);
-});
-
-// Print Section
-router.get("/print-section", async (req, res) => {
-  const pool = await poolPromise;
-
-  const result = await pool.request().query(`
-    SELECT PickListNumber, PickListValue
-    FROM PickListMaster
-    WHERE TableName = 'PrintMaster'
-    AND FieldName = 'PrintSection'
-    ORDER BY DisplayOrder
-  `);
-
-  res.json(result.recordset);
-});
-
-// Kitchen Type
-router.get("/kitchen-type", async (req, res) => {
-  const pool = await poolPromise;
-
-  const result = await pool.request().query(`
-    SELECT PickListNumber, PickListValue
-    FROM PickListMaster
-    WHERE TableName = 'DishMaster'
-    AND FieldName = 'KitchenType'
-    ORDER BY DisplayOrder
-  `);
-
-  res.json(result.recordset);
 });
 
 module.exports = router;
