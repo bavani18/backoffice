@@ -38,11 +38,15 @@ router.post("/save", async (req, res) => {
     const pool = await poolPromise;
 
     await pool.request()
-      .input("UserId", sql.VarChar, userId)
+      .input("UserId", sql.UniqueIdentifier, userId)
       .input("Status", sql.Int, status)
+      .input("BusinessUnitId", sql.UniqueIdentifier, "00000000-0000-0000-0000-000000000001") // 🔥 change later
+      .input("CreatedBy", sql.UniqueIdentifier, userId)
       .query(`
-        INSERT INTO TimeEntry (UserId, EntryTime, Status)
-        VALUES (@UserId, GETDATE(), @Status)
+        INSERT INTO TimeEntry 
+        (UserId, ClockinTime, Status, BusinessUnitId, CreatedBy, CreatedOn)
+        VALUES 
+        (@UserId, GETDATE(), @Status, @BusinessUnitId, @CreatedBy, GETDATE())
       `);
 
     res.json({ message: "✅ Time Entry Saved" });
