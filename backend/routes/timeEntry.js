@@ -44,9 +44,10 @@ router.post("/save", async (req, res) => {
       .input("CreatedBy", sql.UniqueIdentifier, userId)
       .query(`
         INSERT INTO TimeEntry 
-        (UserId, ClockinTime, Status, BusinessUnitId, CreatedBy, CreatedOn)
+        (UserId, ClockinTime, Status, BusinessUnitId, CreatedBy, CreatedOn,ModifiedBy,
+         ModifiedOn)
         VALUES 
-        (@UserId, GETDATE(), @Status, @BusinessUnitId, @CreatedBy, GETDATE())
+        (@UserId, GETDATE(), @Status, @BusinessUnitId, @CreatedBy, GETDATE(),@CreatedBy, GETDATE())
       `);
 
     res.json({ message: "✅ Time Entry Saved" });
