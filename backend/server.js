@@ -113,6 +113,9 @@ app.use("/api/barcode", barcodeRoutes);
 const timeEntryRoutes = require("./routes/timeEntry");
 app.use("/api/timeEntry", timeEntryRoutes);
 
+const cancelRoutes = require("./routes/cancelRemarks");
+app.use("/api/cancelRemarks", cancelRoutes);
+
 
 /* ------------------- GET ALL KITCHENS ------------------- */
 app.get("/kitchen", async (req, res) => {
