@@ -110,6 +110,9 @@ const barcodeRoutes = require("./routes/barcodeRoutes");
  
 app.use("/api/barcode", barcodeRoutes);
 
+const timeEntryRoutes = require("./routes/timeEntry");
+app.use("/api/timeEntry", timeEntryRoutes);
+
 
 /* ------------------- GET ALL KITCHENS ------------------- */
 app.get("/kitchen", async (req, res) => {
