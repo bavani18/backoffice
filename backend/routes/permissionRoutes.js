@@ -1,167 +1,142 @@
 const express = require("express");
 const router = express.Router();
-
 const { sql, poolPromise } = require("../db");
-/* ===============================
-   FORM GROUPS
-================================*/
+ 
+// ================= FORM GROUPS =================
 router.get("/form-groups", async (req, res) => {
   try {
     const pool = await poolPromise;
-    const result = await pool.request().query(`
-      SELECT DISTINCT FormGroupCode FROM Forms
-    `);
-    res.json(result.recordset);
-  } catch (err) {
-    console.error("FORM GROUP ERROR:", err.message);
-    res.status(500).send(err.message);
-  }
-});
- 
-/* ===============================
-   USER GROUPS (FOR DROPDOWN)
-================================*/
-router.get("/user-groups", async (req, res) => {
-  try {
-    const pool = await poolPromise;
  
     const result = await pool.request().query(`
-      SELECT
-        UserGroupCode,
-        UserGroupName
-      FROM UserGroupMaster
-      WHERE isActive = 1
-      ORDER BY UserGroupCode
+      SELECT DISTINCT FormGroupCode
+      FROM Forms
+      ORDER BY FormGroupCode
     `);
- 
-    res.json(result.recordset);
- 
-  } catch (err) {
-    console.error("USER GROUP ERROR:", err.message);
-    res.status(500).send(err.message);
-  }
-});
- 
- // ==============================
-// 🔥 GET FORM GROUPS
-// ==============================
-// router.get("/form-groups", async (req, res) => {
-//   try {
-//     const pool = await poolPromise;
- 
-//     const result = await pool.request().query(`
-//       SELECT DISTINCT FormGroupCode
-//       FROM Forms
-//       ORDER BY FormGroupCode
-//     `);
- 
-//     res.json(result.recordset);
- 
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).send(err.message);
-//   }
-// });
- 
- 
-/* ===============================
-   GET PERMISSIONS
-================================*/
-router.get("/permissions/:groupCode", async (req, res) => {
-  try {
-    const pool = await poolPromise;
- 
-    const result = await pool.request()
-      .input("groupCode", sql.VarChar, req.params.groupCode)
-      .input(
-        "formGroupCode",
-        sql.VarChar,
-        req.query.formGroupCode || null
-      )
-      .query(`
-SELECT
-  u.UserGroupCode,
-  RTRIM(LTRIM(f.FormGroupCode)) AS FormGroupCode,
-  f.FormCode,
-  f.FormDescription,
-  u.AllowRead
-FROM UserPermission u
-INNER JOIN Forms f
-  ON u.FormCode = f.FormCode
-WHERE
-  u.UserGroupCode = @groupCode
-AND (
-  @formGroupCode IS NULL
-  OR @formGroupCode = ''
-  OR RTRIM(LTRIM(f.FormGroupCode)) = RTRIM(LTRIM(@formGroupCode))
-)
-`)
  
     res.json(result.recordset);
  
   } catch (err) {
     console.error(err);
-    res.status(500).send(err.message);
+    res.status(500).send("Error fetching form groups");
   }
 });
-/* ===============================
-   UPDATE PERMISSIONS 🔥
-================================*/
-router.post("/permissions/update", async (req, res) => {
+ 
+ 
+// ================= FETCH PERMISSIONS =================
+router.post("/permissions/fetch", async (req, res) => {
   try {
+    const { userGroup, formGroups } = req.body;
+   
+    // 🔥 DEBUG LOG
+    console.log(`[PERMISSIONS v4] Request for Group: "${userGroup}"`);
+ 
     const pool = await poolPromise;
  
-    const { userGroup, data } = req.body;
+    // 🔥 v4 - CONDITIONAL ROLE FILTER
+    let baseQuery = `
+      SELECT
+        a.UserGroupCode,
+        b.FormGroupCode,
+        b.FormCode,
+        b.FormDescription,
  
-    for (const item of data) {
+        CASE WHEN LTRIM(RTRIM(a.AllowRead)) = 'R' THEN 'R' ELSE 'N' END AS AllowRead,
+        CASE WHEN LTRIM(RTRIM(a.AllowAdd)) = 'A' THEN 'A' ELSE 'N' END AS AllowAdd,
+        CASE WHEN LTRIM(RTRIM(a.AllowUpdate)) = 'U' THEN 'U' ELSE 'N' END AS AllowUpdate,
+        CASE WHEN LTRIM(RTRIM(a.AllowDelete)) = 'D' THEN 'D' ELSE 'N' END AS AllowDelete
  
-      // check exist
-      const check = await pool.request()
-        .input("group", sql.VarChar, userGroup)
-        .input("form", sql.VarChar, item.formCode)
-        .query(`
-          SELECT * FROM UserPermission
-          WHERE UserGroupCode = @group
-          AND FormCode = @form
-        `);
+      FROM Forms b
+      INNER JOIN UserPermission a ON LTRIM(RTRIM(a.FormCode)) = LTRIM(RTRIM(b.FormCode))
+      WHERE (
+        @userGroup = 'ALL'
+        OR UPPER(LTRIM(RTRIM(a.UserGroupCode))) = UPPER(LTRIM(RTRIM(@userGroup)))
+      )
+    `;
  
-      if (check.recordset.length > 0) {
-        // UPDATE
-        await pool.request()
-          .input("group", sql.VarChar, userGroup)
-          .input("form", sql.VarChar, item.formCode)
-          .input("allow", sql.VarChar, item.allow ? 1 : 0)   // ✅ FIX
-          .query(`
-            UPDATE UserPermission
-  SET
-    AllowRead = CASE WHEN @allow = 1 THEN 'R' ELSE 'N' END,
-    AllowAdd = CASE WHEN @allow = 1 THEN 'A' ELSE 'N' END,
-    AllowUpdate = CASE WHEN @allow = 1 THEN 'U' ELSE 'N' END,
-    AllowDelete = CASE WHEN @allow = 1 THEN 'D' ELSE 'N' END
-  WHERE UserGroupCode = @group
-  AND FormCode = @form
-`)
-      } else {
-        // INSERT
-        await pool.request()
-          .input("group", sql.VarChar, userGroup)
-          .input("form", sql.VarChar, item.formCode)
-          .input("allow", sql.Bit, item.allow ? 1 : 0)
-          .query(`
-            INSERT INTO UserPermission
-            (UserGroupCode, FormCode, AllowRead)
-            VALUES
-            (@group, @form, @allow)
-          `);
-      }
+    // 🔥 ADDITIONAL FILTER (FormGroup)
+    if (formGroups && formGroups.length > 0) {
+      const groups = formGroups
+        .map(g => `'${g.trim()}'`)
+        .join(",");
+ 
+      baseQuery += `
+        AND LTRIM(RTRIM(b.FormGroupCode)) IN (${groups})
+      `;
     }
  
-    res.json({ message: "Permissions Updated" });
+    // 🔥 ORDER
+    baseQuery += ` ORDER BY a.UserGroupCode, b.FormGroupCode, b.FormDescription`;
+ 
+    const result = await pool.request()
+      .input("userGroup", sql.NVarChar, userGroup ? userGroup.toString().trim() : "ALL")
+      .query(baseQuery);
+ 
+    console.log(`[PERMISSIONS v4] Returned ${result.recordset.length} rows`);
+ 
+    // 🔥 LOG DATA
+    const data = result.recordset.map(r => ({
+      UserGroupCode: (r.UserGroupCode || "").trim(),
+      FormGroupCode: (r.FormGroupCode || "").trim(),
+      FormCode: (r.FormCode || "").trim(),
+      FormDescription: (r.FormDescription || "").trim(),
+      AllowAdd: (r.AllowAdd || "").trim() === "A",
+      AllowUpdate: (r.AllowUpdate || "").trim() === "U",
+      AllowDelete: (r.AllowDelete || "").trim() === "D",
+      AllowRead: (r.AllowRead || "").trim() === "R"
+    }));
+ 
+    res.json({ version: "v4", data: data });
  
   } catch (err) {
-    console.error("PERMISSION UPDATE ERROR:", err.message);
+    console.error("FETCH ERROR:", err.message);
     res.status(500).send(err.message);
   }
 });
-module.exports = router;
+ 
+ 
+// ================= UPDATE PERMISSIONS =================
+router.post("/permissions/update", async (req, res) => {
+  try {
+    const { userGroup, data } = req.body;
+ 
+    const pool = await poolPromise;
+ 
+    for (let item of data) {
+ 
+      await pool.request()
+        .input("userGroup", sql.VarChar, userGroup)
+        .input("formCode", sql.VarChar, item.FormCode)
+        .input("add", sql.VarChar, item.AllowAdd ? "A" : "N")
+        .input("update", sql.VarChar, item.AllowUpdate ? "U" : "N")
+        .input("delete", sql.VarChar, item.AllowDelete ? "D" : "N")
+        .input("read", sql.VarChar, item.AllowRead ? "R" : "N")
+        .query(`
+          MERGE UserPermission AS target
+          USING (SELECT @userGroup AS UserGroupCode, @formCode AS FormCode) AS source
+          ON target.UserGroupCode = source.UserGroupCode
+          AND target.FormCode = source.FormCode
+ 
+          WHEN MATCHED THEN
+            UPDATE SET
+              AllowAdd = @add,
+              AllowUpdate = @update,
+              AllowDelete = @delete,
+              AllowRead = @read
+ 
+          WHEN NOT MATCHED THEN
+            INSERT (UserGroupCode, FormCode, AllowAdd, AllowUpdate, AllowDelete, AllowRead)
+            VALUES (@userGroup, @formCode, @add, @update, @delete, @read);
+        `);
+    }
+ 
+    res.send("Permission Updated Successfully ✅");
+ 
+  } catch (err) {
+    console.error("UPDATE ERROR:", err.message);
+    res.status(500).send(err.message);
+  }
+});
+ 
+module. Exports = router;
+routes.js
  
