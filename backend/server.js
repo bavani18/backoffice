@@ -116,6 +116,9 @@ const permissionRoutes = require("./routes/permissionRoutes");
 
 app.use("/api", permissionRoutes);
 
+const happyhoursRoutes = require("./routes/happyhours");
+app.use("/api/happyhours", happyhoursRoutes);
+
 
 /* ------------------- GET ALL KITCHENS ------------------- */
 app.get("/kitchen", async (req, res) => {
