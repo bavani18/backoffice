@@ -18,8 +18,6 @@ const corsOptions = {
   credentials: true,
 };
 
-
-
 app.use(cors(corsOptions));
 
 app.use(express.json({ limit: "10mb" }));
@@ -59,8 +57,6 @@ app.use("/api/vendor", vendorRoutes);
 const userRoutes = require("./routes/userRoutes");
 app.use("/api", userRoutes);
 
-const permissionRoutes = require("./routes/permissionRoutes");
-app.use("/api", permissionRoutes);
 
 const userGroupRoutes = require("./routes/userGroupRoutes");
 app.use("/api/usergroup", userGroupRoutes);
@@ -115,6 +111,9 @@ app.use("/api/timeEntry", timeEntryRoutes);
 
 const cancelRoutes = require("./routes/cancelRemarks");
 app.use("/api/cancelRemarks", cancelRoutes);
+
+const permissionRoutes = require("./routes/permissionRoutes");
+app.use("/api/permissions", permissionRoutes);
 
 
 /* ------------------- GET ALL KITCHENS ------------------- */

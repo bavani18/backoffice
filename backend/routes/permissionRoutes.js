@@ -137,6 +137,5 @@ router.post("/permissions/update", async (req, res) => {
   }
 });
  
-module. Exports = router;
-routes.js
+module.exports = router;
  
