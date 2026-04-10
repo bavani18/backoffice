@@ -112,8 +112,9 @@ app.use("/api/timeEntry", timeEntryRoutes);
 const cancelRoutes = require("./routes/cancelRemarks");
 app.use("/api/cancelRemarks", cancelRoutes);
 
-const permissionRoutes = require("./routes/permissionRoutes");
-app.use("/api/permissions", permissionRoutes);
+const permissionRoutes = require("./routes/permission"); 
+
+app.use("/api", permissionRoutes);
 
 
 /* ------------------- GET ALL KITCHENS ------------------- */
