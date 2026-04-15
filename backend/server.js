@@ -57,6 +57,9 @@ app.use("/api/vendor", vendorRoutes);
 const userRoutes = require("./routes/userRoutes");
 app.use("/api", userRoutes);
 
+const stockRoutes = require("./routes/stock");
+app.use("/api/stock", stockRoutes);
+
 
 const userGroupRoutes = require("./routes/userGroupRoutes");
 app.use("/api/usergroup", userGroupRoutes);
