@@ -1355,19 +1355,30 @@ for (let m of mods) {
 
 
 // ================== 🔥 SAVE KITCHENS ==================
+// DELETE OLD
+await pool.request()
+  .input("DishId", sql.UniqueIdentifier, req.params.id)
+  .query("DELETE FROM DishKitchenType WHERE DishId=@DishId");
 
+// SAFE PARSE
 let kitchens = [];
 
-if (d.KitchenTypes) {
-  kitchens = typeof d.KitchenTypes === "string"
-    ? JSON.parse(d.KitchenTypes)
-    : d.KitchenTypes;
+try {
+  if (d.KitchenTypes && d.KitchenTypes !== "") {
+    kitchens = typeof d.KitchenTypes === "string"
+      ? JSON.parse(d.KitchenTypes)
+      : d.KitchenTypes;
+  }
+} catch (err) {
+  console.log("KITCHEN PARSE ERROR ❌", err);
+  kitchens = [];
 }
 
+// INSERT NEW
 for (let k of kitchens) {
   await pool.request()
-    .input("DishId", sql.UniqueIdentifier, dishId) // ✅ IMPORTANT
-    .input("KitchenTypeCode", sql.Int, k)
+    .input("DishId", sql.UniqueIdentifier, req.params.id)
+    .input("KitchenTypeCode", sql.Int, Number(k))
     .input("KitchenTypeName", sql.VarChar(100), "")
     .query(`
       INSERT INTO DishKitchenType
