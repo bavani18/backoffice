@@ -1,3 +1,4 @@
+ 
 const express = require("express");
 const router = express.Router();
 const { sql, poolPromise } = require("../db");
@@ -38,23 +39,23 @@ router.get("/usermaster/:code", async (req, res) => {
     const result = await pool.request()
       .input("code", sql.VarChar, req.params.code)
       .query(`
-  SELECT
-    UserId,
-    UserCode,
-    UserName,
-    UserPassword,
-    UserGroupid AS UserGroupId,  
-    FirstName,
-    LastName,
-    FullName,
-    NickName,
-    IdentificationNo,
-    CardNumber,
-    isWaiter,
-    IsDisabled
-  FROM UserMaster
-  WHERE UserCode = @code
-`)
+        SELECT
+          UserId,
+          UserCode,
+          UserName,
+          UserPassword,
+          UserGroupid AS UserGroupId,  
+          FirstName,
+          LastName,
+          FullName,
+          NickName,
+          IdentificationNo,
+          CardNumber,
+          isWaiter,
+          IsDisabled
+        FROM UserMaster
+        WHERE UserCode = @code
+      `);
  
     res.json(result.recordset[0]);
  
@@ -66,41 +67,49 @@ router.get("/usermaster/:code", async (req, res) => {
  
  
 /* ===============================
-   INSERT OR UPDATE (FIXED 🔥)
+   INSERT OR UPDATE
 ================================*/
 router.post("/usermaster", async (req, res) => {
   try {
     const pool = await poolPromise;
  
     const {
-      UserId,   // 🔥 IMPORTANT
-      UserCode, UserName, UserPassword, UserGroupId,
-      FirstName, LastName, FullName, NickName,
+      UserId,
+      UserCode, UserName, UserPassword,
+      UserGroupId, FirstName, LastName, FullName, NickName,
       IdentificationNo, CardNumber, isWaiter, IsDisabled
     } = req.body;
  
-    // ✅ UPDATE (USING USERID)
-    if (UserId) {
+    // ======================
+    // CLEAN USER ID
+    // ======================
+    const cleanUserId = (UserId && UserId.length === 36) ? UserId : null;
+    const cleanGroupId = (UserGroupId && UserGroupId.length === 36) ? UserGroupId : null;
+ 
+    // ======================
+    // UPDATE
+    // ======================
+    if (cleanUserId) {
       await pool.request()
-        .input("UserId", sql.UniqueIdentifier, UserId)
-        .input("UserCode", sql.VarChar, UserCode)
-        .input("UserName", sql.VarChar, UserName)
-        .input("UserPassword", sql.VarChar, UserPassword)
-        .input("UserGroupId", sql.VarChar, UserGroupId)
-        .input("FirstName", sql.VarChar, FirstName)
-        .input("LastName", sql.VarChar, LastName)
-        .input("FullName", sql.VarChar, FullName)
-        .input("NickName", sql.VarChar, NickName)
-        .input("IdentificationNo", sql.VarChar, IdentificationNo)
-        .input("CardNumber", sql.VarChar, CardNumber)
-        .input("isWaiter", sql.Bit, isWaiter)
-        .input("IsDisabled", sql.Bit, IsDisabled)
+        .input("UserId", sql.UniqueIdentifier, cleanUserId)
+        .input("UserCode", sql.VarChar(50), UserCode)
+        .input("UserName", sql.VarChar(100), UserName)
+        .input("UserPassword", sql.VarChar(100), UserPassword)
+        .input("UserGroupid", sql.UniqueIdentifier, uuidv4())
+        .input("FirstName", sql.VarChar(100), FirstName)
+        .input("LastName", sql.VarChar(100), LastName)
+        .input("FullName", sql.VarChar(150), FullName)
+        .input("NickName", sql.VarChar(100), NickName)
+        .input("IdentificationNo", sql.VarChar(50), IdentificationNo)
+        .input("CardNumber", sql.VarChar(50), CardNumber)
+        .input("isWaiter", sql.Bit, isWaiter ? 1 : 0)
+        .input("IsDisabled", sql.Bit, IsDisabled ? 1 : 0)
         .query(`
           UPDATE UserMaster SET
             UserCode=@UserCode,
             UserName=@UserName,
             UserPassword=@UserPassword,
-            UserGroupid=@UserGroupId,
+            UserGroupid=@UserGroupid,
             FirstName=@FirstName,
             LastName=@LastName,
             FullName=@FullName,
@@ -115,31 +124,56 @@ router.post("/usermaster", async (req, res) => {
       return res.json({ message: "User Updated" });
     }
  
-    // ✅ INSERT
+    // ======================
+    // INSERT
+    // ======================
+    if (!UserName) {
+      return res.status(400).json({ message: "UserName is required" });
+    }
+ 
+    const generateUserCode = () => {
+      const timePart = Date.now().toString().slice(-7);
+      const randomPart = Math.floor(Math.random() * 900 + 100);
+      return `USR${timePart}${randomPart}`;
+    };
+ 
+    let finalUserCode = UserCode && UserCode.trim() ? UserCode.trim() : generateUserCode();
+ 
+    let existingUser = await pool.request()
+      .input("UserCode", sql.VarChar(50), finalUserCode)
+      .query(`SELECT UserId FROM UserMaster WHERE UserCode = @UserCode`);
+ 
+    while (existingUser.recordset.length) {
+      finalUserCode = generateUserCode();
+      existingUser = await pool.request()
+        .input("UserCode", sql.VarChar(50), finalUserCode)
+        .query(`SELECT UserId FROM UserMaster WHERE UserCode = @UserCode`);
+    }
+ 
     await pool.request()
       .input("UserId", sql.UniqueIdentifier, uuidv4())
-      .input("UserCode", sql.VarChar, UserCode)
-      .input("UserName", sql.VarChar, UserName)
-      .input("UserPassword", sql.VarChar, UserPassword)
-      .input("UserGroupId", sql.VarChar, UserGroupId)
-      .input("FirstName", sql.VarChar, FirstName)
-      .input("LastName", sql.VarChar, LastName)
-      .input("FullName", sql.VarChar, FullName)
-      .input("NickName", sql.VarChar, NickName)
-      .input("IdentificationNo", sql.VarChar, IdentificationNo)
-      .input("CardNumber", sql.VarChar, CardNumber)
-      .input("isWaiter", sql.Bit, isWaiter)
-      .input("IsDisabled", sql.Bit, IsDisabled)
+      .input("UserCode", sql.VarChar(50), finalUserCode)
+      .input("UserName", sql.VarChar(100), UserName)
+      .input("UserPassword", sql.VarChar(100), UserPassword)
+      .input("UserGroupid", sql.UniqueIdentifier, uuidv4())
+      .input("FirstName", sql.VarChar(100), FirstName)
+      .input("LastName", sql.VarChar(100), LastName)
+      .input("FullName", sql.VarChar(150), FullName)
+      .input("NickName", sql.VarChar(100), NickName)
+      .input("IdentificationNo", sql.VarChar(50), IdentificationNo)
+      .input("CardNumber", sql.VarChar(50), CardNumber)
+      .input("isWaiter", sql.Bit, isWaiter ? 1 : 0)
+      .input("IsDisabled", sql.Bit, IsDisabled ? 1 : 0)
       .query(`
         INSERT INTO UserMaster
         (
-          UserId,UserCode,UserName,UserPassword,UserGroupId,
+          UserId,UserCode,UserName,UserPassword,UserGroupid,
           FirstName,LastName,FullName,NickName,
           IdentificationNo,CardNumber,isWaiter,IsDisabled
         )
         VALUES
         (
-          @UserId,@UserCode,@UserName,@UserPassword,@UserGroupId,
+          @UserId,@UserCode,@UserName,@UserPassword,@UserGroupid,
           @FirstName,@LastName,@FullName,@NickName,
           @IdentificationNo,@CardNumber,@isWaiter,@IsDisabled
         )
