@@ -1263,14 +1263,7 @@ if (req.file) {
         )
       `);
 
-    res.send("Inserted ✅");
-
-  } catch (err) {
-    console.error("INSERT ERROR ❌", err);
-    res.status(500).send(err.message);
-  }
-});
-   // 🔥 DELETE OLD KITCHEN
+        // 🔥 DELETE OLD KITCHEN
 await pool.request()
   .input("DishId", sql.UniqueIdentifier, req.params.id)
   .query("DELETE FROM DishKitchenType WHERE DishId=@DishId");
@@ -1320,6 +1313,15 @@ for (let m of mods) {
       VALUES (@DishId, @ModifierId)
     `);
 }
+
+    res.send("Inserted ✅");
+
+  } catch (err) {
+    console.error("INSERT ERROR ❌", err);
+    res.status(500).send(err.message);
+  }
+});
+ 
 
 
 // ================= PUT =================
