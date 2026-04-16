@@ -1272,10 +1272,15 @@ await pool.request()
 
 let mods = [];
 
-if (d.Modifiers) {
-  mods = typeof d.Modifiers === "string"
-    ? JSON.parse(d.Modifiers)
-    : d.Modifiers;
+try {
+  if (d.Modifiers && d.Modifiers !== "") {
+    mods = typeof d.Modifiers === "string"
+      ? JSON.parse(d.Modifiers)
+      : d.Modifiers;
+  }
+} catch (err) {
+  console.log("MODIFIER ERROR ❌", err);
+  mods = [];
 }
 
 for (let m of mods) {
