@@ -1333,7 +1333,7 @@ app.post("/dish", upload.single("image"), async (req, res) => {
     for (let k of kitchens) {
       await pool.request()
         .input("DishId", sql.UniqueIdentifier, dishId)
-        .input("KitchenTypeCode", sql.Int, Number(k))
+        .input("KitchenTypeCode", sql.Int, k.KitchenTypeCode)
          .input("KitchenTypeName", sql.VarChar(100), k.KitchenTypeName)
         .query(`
           INSERT INTO DishKitchenType (DishId, KitchenTypeCode,KitchenTypeName)
