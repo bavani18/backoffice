@@ -975,14 +975,14 @@ if (KitchenTypes) {
 
 for (let k of kitchens) {
   await pool.request()
-    .input("DishGroupId", sql.UniqueIdentifier, dgId)
-    .input("KitchenTypeCode", sql.Int, k.KitchenTypeCode)
-    .input("KitchenTypeName", sql.VarChar(100), k.KitchenTypeName)
+    .input("DishId", sql.UniqueIdentifier, req.params.id)
+    .input("KitchenTypeCode", sql.Int, k)
+    .input("KitchenTypeName", sql.VarChar(100), "")
     .query(`
-      INSERT INTO DishGroupKitchenType
-      (DishGroupId,KitchenTypeCode,KitchenTypeName)
+      INSERT INTO DishKitchenType
+      (DishId, KitchenTypeCode, KitchenTypeName)
       VALUES
-      (@DishGroupId,@KitchenTypeCode,@KitchenTypeName)
+      (@DishId, @KitchenTypeCode, @KitchenTypeName)
     `);
 }
 
@@ -1263,60 +1263,7 @@ if (req.file) {
         )
       `);
 
-      // ================== 🔥 SAVE MODIFIERS ==================
-  // DELETE OLD
-await pool.request()
-  .input("DishId", sql.UniqueIdentifier, req.params.id)
-  .query("DELETE FROM DishModifier WHERE DishId=@DishId");
-
-// INSERT NEW
-let mods = [];
-
-if (d.Modifiers) {
-  mods = typeof d.Modifiers === "string"
-    ? JSON.parse(d.Modifiers)
-    : d.Modifiers;
-}
-
-for (let m of mods) {
-  await pool.request()
-    .input("DishId", sql.UniqueIdentifier, req.params.id)
-    .input("ModifierId", sql.UniqueIdentifier, m)
-    .query(`
-      INSERT INTO DishModifier (DishId, ModifierId)
-      VALUES (@DishId, @ModifierId)
-    `);
-}
-       
-
-
-// ================== 🔥tab SAVE KITCHENS ==================
-// DELETE OLD
-await pool.request()
-  .input("DishId", sql.UniqueIdentifier, req.params.id)
-  .query("DELETE FROM DishKitchenType WHERE DishId=@DishId");
-
-// INSERT NEW
-let kitchens = [];
-
-if (d.KitchenTypes) {
-  kitchens = typeof d.KitchenTypes === "string"
-    ? JSON.parse(d.KitchenTypes)
-    : d.KitchenTypes;
-}
-
-for (let k of kitchens) {
-  await pool.request()
-    .input("DishId", sql.UniqueIdentifier, req.params.id)
-    .input("KitchenTypeCode", sql.Int, k)
-    .input("KitchenTypeName", sql.VarChar(100), "")
-    .query(`
-      INSERT INTO DishKitchenType
-      (DishId, KitchenTypeCode, KitchenTypeName)
-      VALUES
-      (@DishId, @KitchenTypeCode, @KitchenTypeName)
-    `);
-}
+     
 
     res.send("Inserted ✅");
 
@@ -1386,7 +1333,49 @@ if (req.file) {
         WHERE DishId=@DishId
       `);
 
+ // ================== 🔥 SAVE MODIFIERS ==================
 
+let mods = [];
+
+if (d.Modifiers) {
+  mods = typeof d.Modifiers === "string"
+    ? JSON.parse(d.Modifiers)
+    : d.Modifiers;
+}
+
+for (let m of mods) {
+  await pool.request()
+    .input("DishId", sql.UniqueIdentifier, dishId) // ✅ IMPORTANT
+    .input("ModifierId", sql.UniqueIdentifier, m)
+    .query(`
+      INSERT INTO DishModifier (DishId, ModifierId)
+      VALUES (@DishId, @ModifierId)
+    `);
+}
+
+
+// ================== 🔥 SAVE KITCHENS ==================
+
+let kitchens = [];
+
+if (d.KitchenTypes) {
+  kitchens = typeof d.KitchenTypes === "string"
+    ? JSON.parse(d.KitchenTypes)
+    : d.KitchenTypes;
+}
+
+for (let k of kitchens) {
+  await pool.request()
+    .input("DishId", sql.UniqueIdentifier, dishId) // ✅ IMPORTANT
+    .input("KitchenTypeCode", sql.Int, k)
+    .input("KitchenTypeName", sql.VarChar(100), "")
+    .query(`
+      INSERT INTO DishKitchenType
+      (DishId, KitchenTypeCode, KitchenTypeName)
+      VALUES
+      (@DishId, @KitchenTypeCode, @KitchenTypeName)
+    `);
+}
 
     res.send("Updated ✅");
 
