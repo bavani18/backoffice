@@ -967,22 +967,25 @@ await pool.request()
 // ✅ INSERT KITCHENS
 let kitchens = [];
 
-if (KitchenTypes) {
-  kitchens = typeof KitchenTypes === "string"
-    ? JSON.parse(KitchenTypes)
-    : KitchenTypes;
+try {
+  kitchens = d.KitchenTypes
+    ? JSON.parse(d.KitchenTypes)
+    : [];
+} catch {
+  kitchens = [];
 }
+
+// ✅ REMOVE BAD VALUES
+kitchens = kitchens.filter(k => k && !isNaN(Number(k)));
 
 for (let k of kitchens) {
   await pool.request()
-    .input("DishId", sql.UniqueIdentifier, req.params.id)
-    .input("KitchenTypeCode", sql.Int, k)
-    .input("KitchenTypeName", sql.VarChar(100), "")
+    .input("DishId", sql.UniqueIdentifier, dishId)
+    .input("KitchenTypeCode", sql.Int, Number(k))
     .query(`
       INSERT INTO DishKitchenType
-      (DishId, KitchenTypeCode, KitchenTypeName)
-      VALUES
-      (@DishId, @KitchenTypeCode, @KitchenTypeName)
+      (DishId, KitchenTypeCode)
+      VALUES (@DishId, @KitchenTypeCode)
     `);
 }
 
@@ -993,26 +996,30 @@ await pool.request()
   .query("DELETE FROM DishGroupModifier WHERE DishGroupId=@DishGroupId");
 
 // ✅ INSERT MODIFIERS
+
 let mods = [];
 
-if (Modifiers) {
-  mods = typeof Modifiers === "string"
-    ? JSON.parse(Modifiers)
-    : Modifiers;
+try {
+  mods = d.Modifiers
+    ? JSON.parse(d.Modifiers)
+    : [];
+} catch {
+  mods = [];
 }
+
+// ✅ REMOVE BAD VALUES
+mods = mods.filter(m => m && m !== "");
 
 for (let m of mods) {
   await pool.request()
-    .input("DishGroupId", sql.UniqueIdentifier, dgId)
+    .input("DishId", sql.UniqueIdentifier, dishId)
     .input("ModifierId", sql.UniqueIdentifier, m)
     .query(`
-      INSERT INTO DishGroupModifier
-      (DishGroupId,ModifierId)
-      VALUES
-      (@DishGroupId,@ModifierId)
+      INSERT INTO DishModifier
+      (DishId, ModifierId)
+      VALUES (@DishId, @ModifierId)
     `);
 }
-
     res.json({ message: "DishGroup saved successfully", DishGroupId: dgId });
 
   } catch (err) {
