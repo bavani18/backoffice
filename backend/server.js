@@ -1328,7 +1328,16 @@ app.post("/dish", upload.single("image"), async (req, res) => {
       .input("DishId", sql.UniqueIdentifier, dishId)
       .query("DELETE FROM DishKitchenType WHERE DishId=@DishId");
 
-    let kitchens = d.KitchenTypes ? JSON.parse(d.KitchenTypes) : [];
+   let kitchens = [];
+
+try {
+  kitchens = d.KitchenTypes
+    ? JSON.parse(d.KitchenTypes)
+    : [];
+} catch (e) {
+  console.log("Kitchen parse error ❌", d.KitchenTypes);
+  kitchens = [];
+}
 
     for (let k of kitchens) {
       await pool.request()
@@ -1346,7 +1355,14 @@ app.post("/dish", upload.single("image"), async (req, res) => {
       .input("DishId", sql.UniqueIdentifier, dishId)
       .query("DELETE FROM DishModifier WHERE DishId=@DishId");
 
-    let mods = d.Modifiers ? JSON.parse(d.Modifiers) : [];
+   let mods = [];
+
+try {
+  mods = d.Modifiers ? JSON.parse(d.Modifiers) : [];
+} catch (e) {
+  console.log("Modifier parse error ❌", d.Modifiers);
+  mods = [];
+}
 
     for (let m of mods) {
       await pool.request()
