@@ -1263,8 +1263,6 @@ if (req.file) {
         )
       `);
 
-     
-
     res.send("Inserted ✅");
 
   } catch (err) {
@@ -1272,7 +1270,56 @@ if (req.file) {
     res.status(500).send(err.message);
   }
 });
+   // 🔥 DELETE OLD KITCHEN
+await pool.request()
+  .input("DishId", sql.UniqueIdentifier, req.params.id)
+  .query("DELETE FROM DishKitchenType WHERE DishId=@DishId");
 
+// 🔥 INSERT NEW KITCHEN
+let kitchens = [];
+
+if (d.KitchenTypes) {
+  kitchens = typeof d.KitchenTypes === "string"
+    ? JSON.parse(d.KitchenTypes)
+    : d.KitchenTypes;
+}
+
+for (let k of kitchens) {
+  await pool.request()
+    .input("DishId", sql.UniqueIdentifier, req.params.id)
+    .input("KitchenTypeCode", sql.Int, Number(k))
+    .query(`
+      INSERT INTO DishKitchenType
+      (DishId, KitchenTypeCode)
+      VALUES (@DishId, @KitchenTypeCode)
+    `);
+}
+
+
+// 🔥 DELETE OLD MODIFIER
+await pool.request()
+  .input("DishId", sql.UniqueIdentifier, req.params.id)
+  .query("DELETE FROM DishModifier WHERE DishId=@DishId");
+
+// 🔥 INSERT NEW MODIFIER
+let mods = [];
+
+if (d.Modifiers) {
+  mods = typeof d.Modifiers === "string"
+    ? JSON.parse(d.Modifiers)
+    : d.Modifiers;
+}
+
+for (let m of mods) {
+  await pool.request()
+    .input("DishId", sql.UniqueIdentifier, req.params.id)
+    .input("ModifierId", sql.UniqueIdentifier, m)
+    .query(`
+      INSERT INTO DishModifier
+      (DishId, ModifierId)
+      VALUES (@DishId, @ModifierId)
+    `);
+}
 
 
 // ================= PUT =================
@@ -1332,61 +1379,6 @@ if (req.file) {
           ModifiedOn=GETDATE()
         WHERE DishId=@DishId
       `);
-
- // ================== 🔥 SAVE MODIFIERS ==================
-
-let mods = [];
-
-if (d.Modifiers) {
-  mods = typeof d.Modifiers === "string"
-    ? JSON.parse(d.Modifiers)
-    : d.Modifiers;
-}
-
-for (let m of mods) {
-  await pool.request()
-    .input("DishId", sql.UniqueIdentifier, dishId) // ✅ IMPORTANT
-    .input("ModifierId", sql.UniqueIdentifier, m)
-    .query(`
-      INSERT INTO DishModifier (DishId, ModifierId)
-      VALUES (@DishId, @ModifierId)
-    `);
-}
-
-
-// ================== 🔥 SAVE KITCHENS ==================
-// DELETE OLD
-await pool.request()
-  .input("DishId", sql.UniqueIdentifier, req.params.id)
-  .query("DELETE FROM DishKitchenType WHERE DishId=@DishId");
-
-// SAFE PARSE
-let kitchens = [];
-
-try {
-  if (d.KitchenTypes && d.KitchenTypes !== "") {
-    kitchens = typeof d.KitchenTypes === "string"
-      ? JSON.parse(d.KitchenTypes)
-      : d.KitchenTypes;
-  }
-} catch (err) {
-  console.log("KITCHEN PARSE ERROR ❌", err);
-  kitchens = [];
-}
-
-// INSERT NEW
-for (let k of kitchens) {
-  await pool.request()
-    .input("DishId", sql.UniqueIdentifier, req.params.id)
-    .input("KitchenTypeCode", sql.Int, Number(k))
-    .input("KitchenTypeName", sql.VarChar(100), "")
-    .query(`
-      INSERT INTO DishKitchenType
-      (DishId, KitchenTypeCode, KitchenTypeName)
-      VALUES
-      (@DishId, @KitchenTypeCode, @KitchenTypeName)
-    `);
-}
 
     res.send("Updated ✅");
 
@@ -1455,6 +1447,10 @@ app.get("/dishkitchen/:id", async (req, res) => {
     res.status(500).send("Error");
   }
 });
+
+
+
+
 /*=====================================================end dish
 /*==========================GET ALL MODIFIERS*/
 app.get("/modifiermaster", async (req, res) => {
