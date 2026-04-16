@@ -1304,8 +1304,8 @@ if (d.KitchenTypes) {
 for (let k of kitchens) {
   await pool.request()
     .input("DishId", sql.UniqueIdentifier, dishId)
-    .input("KitchenTypeCode", sql.Int, k.KitchenTypeCode)
-    .input("KitchenTypeName", sql.VarChar(100), k.KitchenTypeName)
+    .input("KitchenTypeCode", sql.Int, k)
+.input("KitchenTypeName", sql.VarChar(100), "")
     .query(`
       INSERT INTO DishKitchenType
       (DishId, KitchenTypeCode, KitchenTypeName)
