@@ -57,9 +57,6 @@ app.use("/api/vendor", vendorRoutes);
 const userRoutes = require("./routes/userRoutes");
 app.use("/api", userRoutes);
 
-const stockRoutes = require("./routes/stock");
-app.use("/api/stock", stockRoutes);
-
 
 const userGroupRoutes = require("./routes/userGroupRoutes");
 app.use("/api/usergroup", userGroupRoutes);
@@ -967,25 +964,22 @@ await pool.request()
 // ✅ INSERT KITCHENS
 let kitchens = [];
 
-try {
-  kitchens = KitchenTypes
-  ? JSON.parse(KitchenTypes)
-  : [];
-} catch {
-  kitchens = [];
+if (KitchenTypes) {
+  kitchens = typeof KitchenTypes === "string"
+    ? JSON.parse(KitchenTypes)
+    : KitchenTypes;
 }
-
-// ✅ REMOVE BAD VALUES
-kitchens = kitchens.filter(k => k && !isNaN(Number(k)));
 
 for (let k of kitchens) {
   await pool.request()
-    .input("DishId", sql.UniqueIdentifier, dishId)
-    .input("KitchenTypeCode", sql.Int, Number(k))
+    .input("DishGroupId", sql.UniqueIdentifier, dgId)
+    .input("KitchenTypeCode", sql.Int, k.KitchenTypeCode)
+    .input("KitchenTypeName", sql.VarChar(100), k.KitchenTypeName)
     .query(`
-      INSERT INTO DishKitchenType
-      (DishId, KitchenTypeCode)
-      VALUES (@DishId, @KitchenTypeCode)
+      INSERT INTO DishGroupKitchenType
+      (DishGroupId,KitchenTypeCode,KitchenTypeName)
+      VALUES
+      (@DishGroupId,@KitchenTypeCode,@KitchenTypeName)
     `);
 }
 
@@ -996,30 +990,26 @@ await pool.request()
   .query("DELETE FROM DishGroupModifier WHERE DishGroupId=@DishGroupId");
 
 // ✅ INSERT MODIFIERS
-
 let mods = [];
 
-try {
- mods = Modifiers
-  ? JSON.parse(Modifiers)
-  : [];
-} catch {
-  mods = [];
+if (Modifiers) {
+  mods = typeof Modifiers === "string"
+    ? JSON.parse(Modifiers)
+    : Modifiers;
 }
-
-// ✅ REMOVE BAD VALUES
-mods = mods.filter(m => m && m !== "");
 
 for (let m of mods) {
   await pool.request()
-    .input("DishId", sql.UniqueIdentifier, dishId)
+    .input("DishGroupId", sql.UniqueIdentifier, dgId)
     .input("ModifierId", sql.UniqueIdentifier, m)
     .query(`
-      INSERT INTO DishModifier
-      (DishId, ModifierId)
-      VALUES (@DishId, @ModifierId)
+      INSERT INTO DishGroupModifier
+      (DishGroupId,ModifierId)
+      VALUES
+      (@DishGroupId,@ModifierId)
     `);
 }
+
     res.json({ message: "DishGroup saved successfully", DishGroupId: dgId });
 
   } catch (err) {
@@ -1194,216 +1184,184 @@ res.json(data);
   }
 });
 
-// ================= POST =================
 app.post("/dish", upload.single("image"), async (req, res) => {
   try {
-
-    // console.log("FILE 👉", req.file);
-    // console.log("BODY 👉", req.body);
-
     const pool = await poolPromise;
     const d = req.body;
-     const dishId = uuidv4();
-     let imageId = null;
-    let imageName = null;
 
-if (req.file) {
-  imageId = uuidv4();
- imageName = req.file.filename;
-   const imageBuffer = fs.readFileSync(req.file.path); // 🔥 ADD THIS
+    const dishId = d.DishId ? d.DishId : uuidv4();
 
-  await pool.request()
-    .input("ImageId", sql.UniqueIdentifier, imageId)
-    .input("ImageName", sql.VarChar(100), req.file.filename)
-     .input("ImageData", sql.VarBinary(sql.MAX), imageBuffer)
-    .query(`
-      INSERT INTO ImageList (ImageId, ImageName,ImageData)
-      VALUES (@ImageId, @ImageName,@ImageData)
-    `);
-}
+    let imageId = null;
 
-    console.log("BODY 👉", d); // debug
+    // IMAGE SAVE
+    if (req.file) {
+      imageId = uuidv4();
+      const imageBuffer = fs.readFileSync(req.file.path);
 
+      await pool.request()
+        .input("ImageId", sql.UniqueIdentifier, imageId)
+        .input("ImageName", sql.VarChar(100), req.file.filename)
+        .input("ImageData", sql.VarBinary(sql.MAX), imageBuffer)
+        .query(`
+          INSERT INTO ImageList (ImageId, ImageName, ImageData)
+          VALUES (@ImageId, @ImageName, @ImageData)
+        `);
+    }
+
+    // CHECK EXIST
+    const exists = await pool.request()
+      .input("DishId", sql.UniqueIdentifier, dishId)
+      .query("SELECT DishId FROM DishMaster WHERE DishId=@DishId");
+
+    if (exists.recordset.length > 0) {
+
+      // 🔄 UPDATE (ALL COLUMNS)
+      await pool.request()
+        .input("DishId", sql.UniqueIdentifier, dishId)
+        .input("DishCode", sql.NVarChar, d.DishCode || "")
+        .input("Name", sql.NVarChar, d.Name || "")
+        .input("ShortName", sql.NVarChar, d.ShortName || "")
+        .input("Description", sql.NVarChar, d.Description || "")
+        .input("DishGroupId", sql.UniqueIdentifier, d.DishGroupId || null)
+
+        .input("CurrentCost", sql.Decimal(18,2), Number(d.CurrentCost) || 0)
+        .input("SordCode", sql.Int, Number(d.SordCode) || 0)
+        .input("UnitCost", sql.Decimal(18,2), Number(d.UnitCost) || 0)
+        .input("QuantityOnHand", sql.Decimal(18,2), Number(d.QuantityOnHand) || 0)
+
+        .input("NameInOtherLanguage", sql.NVarChar, d.NameInOtherLanguage || "")
+        .input("ImageId", sql.UniqueIdentifier, imageId)
+        .input("IsActive", sql.Bit, d.IsActive ?? false)
+        .input("iskitchenPrint", sql.Bit, d.iskitchenPrint ?? false)
+        .input("KitchenType", sql.Int, Number(d.KitchenType) || 0)
+        .input("SubkitchenType", sql.Int, Number(d.SubkitchenType) || 0)
+        .input("isDiscountAllowed", sql.Bit, d.isDiscountAllowed ?? false)
+        .input("IsTaxAllowed", sql.Bit, d.IsTaxAllowed ?? false)
+        .input("IsStockDish", sql.Bit, d.IsStockDish ?? false)
+        .input("isFOC", sql.Bit, d.isFOC ?? false)
+        .input("isServiceCharge", sql.Bit, d.isServiceCharge ?? false)
+        .input("isFavourite", sql.Bit, d.isFavourite ?? false)
+        .input("isMultiPrice", sql.Bit, d.isMultiPrice ?? false)
+        .input("isOpenitem", sql.Bit, d.isOpenitem ?? false)
+
+        .query(`
+          UPDATE DishMaster SET
+            DishCode=@DishCode,
+            Name=@Name,
+            ShortName=@ShortName,
+            Description=@Description,
+            DishGroupId=@DishGroupId,
+            CurrentCost=@CurrentCost,
+            SordCode=@SordCode,
+            UnitCost=@UnitCost,
+            QuantityOnHand=@QuantityOnHand,
+            NameInOtherLanguage=@NameInOtherLanguage,
+            ImageId = COALESCE(@ImageId, ImageId),
+            IsActive=@IsActive,
+            iskitchenPrint=@iskitchenPrint,
+            KitchenType=@KitchenType,
+            SubkitchenType=@SubkitchenType,
+            isDiscountAllowed=@isDiscountAllowed,
+            IsTaxAllowed=@IsTaxAllowed,
+            IsStockDish=@IsStockDish,
+            isFOC=@isFOC,
+            isServiceCharge=@isServiceCharge,
+            isFavourite=@isFavourite,
+            isMultiPrice=@isMultiPrice,
+            isOpenitem=@isOpenitem
+          WHERE DishId=@DishId
+        `);
+
+    } else {
+
+      // 🆕 INSERT (ALL COLUMNS)
+      await pool.request()
+        .input("DishId", sql.UniqueIdentifier, dishId)
+        .input("DishCode", sql.NVarChar, d.DishCode || "")
+        .input("Name", sql.NVarChar, d.Name || "")
+        .input("ShortName", sql.NVarChar, d.ShortName || "")
+        .input("Description", sql.NVarChar, d.Description || "")
+        .input("DishGroupId", sql.UniqueIdentifier, d.DishGroupId || null)
+
+        .input("CurrentCost", sql.Decimal(18,2), Number(d.CurrentCost) || 0)
+        .input("SordCode", sql.Int, Number(d.SordCode) || 0)
+        .input("UnitCost", sql.Decimal(18,2), Number(d.UnitCost) || 0)
+        .input("QuantityOnHand", sql.Decimal(18,2), Number(d.QuantityOnHand) || 0)
+
+        .input("NameInOtherLanguage", sql.NVarChar, d.NameInOtherLanguage || "")
+        .input("ImageId", sql.UniqueIdentifier, imageId)
+        .input("IsActive", sql.Bit, d.IsActive ?? false)
+        .input("iskitchenPrint", sql.Bit, d.iskitchenPrint ?? false)
+        .input("KitchenType", sql.Int, Number(d.KitchenType) || 0)
+        .input("SubkitchenType", sql.Int, Number(d.SubkitchenType) || 0)
+        .input("isDiscountAllowed", sql.Bit, d.isDiscountAllowed ?? false)
+        .input("IsTaxAllowed", sql.Bit, d.IsTaxAllowed ?? false)
+        .input("IsStockDish", sql.Bit, d.IsStockDish ?? false)
+        .input("isFOC", sql.Bit, d.isFOC ?? false)
+        .input("isServiceCharge", sql.Bit, d.isServiceCharge ?? false)
+        .input("isFavourite", sql.Bit, d.isFavourite ?? false)
+        .input("isMultiPrice", sql.Bit, d.isMultiPrice ?? false)
+        .input("isOpenitem", sql.Bit, d.isOpenitem ?? false)
+
+        .query(`
+          INSERT INTO DishMaster (
+            DishId, DishCode, Name, ShortName, Description,
+            DishGroupId, CurrentCost, SordCode, UnitCost, QuantityOnHand,
+            NameInOtherLanguage, IsActive, iskitchenPrint,
+            isDiscountAllowed, IsTaxAllowed, IsStockDish,
+            isFOC, isServiceCharge, isFavourite, isMultiPrice, isOpenitem,
+            ImageId, KitchenType, SubkitchenType
+          )
+          VALUES (
+            @DishId, @DishCode, @Name, @ShortName, @Description,
+            @DishGroupId, @CurrentCost, @SordCode, @UnitCost, @QuantityOnHand,
+            @NameInOtherLanguage, @IsActive, @iskitchenPrint,
+            @isDiscountAllowed, @IsTaxAllowed, @IsStockDish,
+            @isFOC, @isServiceCharge, @isFavourite, @isMultiPrice, @isOpenitem,
+            @ImageId, @KitchenType, @SubkitchenType
+          )
+        `);
+    }
+
+    // 🔥 KITCHEN SAVE
     await pool.request()
       .input("DishId", sql.UniqueIdentifier, dishId)
+      .query("DELETE FROM DishKitchenType WHERE DishId=@DishId");
 
-      .input("DishCode", sql.NVarChar, d.DishCode || "")
-      .input("Name", sql.NVarChar, d.Name || "")
-      .input("ShortName", sql.NVarChar, d.ShortName || "")
-      .input("Description", sql.NVarChar, d.Description || "")
-      .input("DishGroupId", sql.UniqueIdentifier, d.DishGroupId || null)
+    let kitchens = d.KitchenTypes ? JSON.parse(d.KitchenTypes) : [];
 
-      .input("CurrentCost", sql.Decimal(18,2), Number(d.CurrentCost) || 0)
-      .input("SordCode", sql.Int, Number(d.SordCode) || 0)
-      .input("UnitCost", sql.Decimal(18,2), Number(d.UnitCost) || 0)
-      .input("QuantityOnHand", sql.Decimal(18,2), Number(d.QuantityOnHand) || 0)
+    for (let k of kitchens) {
+      await pool.request()
+        .input("DishId", sql.UniqueIdentifier, dishId)
+        .input("KitchenTypeCode", sql.Int, Number(k))
+         .input("KitchenTypeName", sql.VarChar(100), k.KitchenTypeName)
+        .query(`
+          INSERT INTO DishKitchenType (DishId, KitchenTypeCode,KitchenTypeName)
+          VALUES (@DishId, @KitchenTypeCode,@KitchenTypeName)
+        `);
+    }
 
-      .input("NameInOtherLanguage", sql.NVarChar, d.NameInOtherLanguage || "")
-      .input("ImageId", sql.UniqueIdentifier, imageId)
-      .input("IsActive", sql.Bit, d.IsActive ?? false)
-      .input("iskitchenPrint", sql.Bit, d.iskitchenPrint ?? false)
-     .input("KitchenType", sql.Int, Number(d.KitchenType) || 0)
-      .input("SubkitchenType", sql.Int, Number(d.SubkitchenType) || 0)
-      .input("isDiscountAllowed", sql.Bit, d.isDiscountAllowed ?? false)
-      .input("IsTaxAllowed", sql.Bit, d.IsTaxAllowed ?? false)
-      .input("IsStockDish", sql.Bit, d.IsStockDish ?? false)
-      .input("isFOC", sql.Bit, d.isFOC ?? false)
-      .input("isServiceCharge", sql.Bit, d.isServiceCharge ?? false)
-      .input("isFavourite", sql.Bit, d.isFavourite ?? false)
-      .input("isMultiPrice", sql.Bit, d.isMultiPrice ?? false)
-      .input("isOpenitem", sql.Bit, d.isOpenitem ?? false)
-
-      .query(`
-        INSERT INTO DishMaster (
-          DishId, DishCode, Name, ShortName, Description,
-          DishGroupId, CurrentCost, SordCode, UnitCost, QuantityOnHand,
-          NameInOtherLanguage, IsActive, iskitchenPrint,
-          isDiscountAllowed, IsTaxAllowed, IsStockDish,
-          isFOC, isServiceCharge, isFavourite, isMultiPrice, isOpenitem,ImageId,KitchenType,SubkitchenType
-        )
-        VALUES (
-          @DishId, @DishCode, @Name, @ShortName, @Description,
-          @DishGroupId, @CurrentCost, @SordCode, @UnitCost, @QuantityOnHand,
-          @NameInOtherLanguage, @IsActive, @iskitchenPrint,
-          @isDiscountAllowed, @IsTaxAllowed, @IsStockDish,
-          @isFOC, @isServiceCharge, @isFavourite, @isMultiPrice, @isOpenitem,@ImageId,@KitchenType,@SubkitchenType
-        )
-      `);
-
-        // 🔥 DELETE OLD dish tab KITCHEN
-await pool.request()
-  .input("DishId", sql.UniqueIdentifier, dishId)
-  .query("DELETE FROM DishKitchenType WHERE DishId=@DishId");
-
-// 🔥 INSERT NEW KITCHEN
-let kitchens = [];
-
-try {
-  kitchens = d.KitchenTypes
-    ? JSON.parse(d.KitchenTypes)
-    : [];
-} catch (err) {
-  console.log("Kitchen parse error ❌", err);
-  kitchens = [];
-}
-
-// safety
-kitchens = kitchens.filter(k => k && !isNaN(Number(k)));
-
-for (let k of kitchens) {
-  await pool.request()
-    .input("DishId", sql.UniqueIdentifier, dishId)
-    .input("KitchenTypeCode", sql.Int, Number(k))
-    .query(`
-      INSERT INTO DishKitchenType
-      (DishId, KitchenTypeCode)
-      VALUES (@DishId, @KitchenTypeCode)
-    `);
-}
-
-
-// 🔥 DELETE OLD dish tab MODIFIER
-await pool.request()
-  .input("DishId", sql.UniqueIdentifier, dishId)
-  .query("DELETE FROM DishModifier WHERE DishId=@DishId");
-
-// 🔥 INSERT NEW MODIFIER
-let mods = [];
-
-try {
-  mods = d.Modifiers
-    ? JSON.parse(d.Modifiers)
-    : [];
-} catch (err) {
-  console.log("Modifier parse error ❌", err);
-  mods = [];
-}
-
-// safety
-mods = mods.filter(m => m && m !== "");
-
-for (let m of mods) {
-  await pool.request()
-    .input("DishId", sql.UniqueIdentifier, dishId)
-    .input("ModifierId", sql.UniqueIdentifier, m)
-    .query(`
-      INSERT INTO DishModifier
-      (DishId, ModifierId)
-      VALUES (@DishId, @ModifierId)
-    `);
-}
-    res.send("Inserted ✅");
-
-  } catch (err) {
-    console.error("INSERT ERROR ❌", err);
-    res.status(500).send(err.message);
-  }
-});
- 
-
-
-// ================= PUT =================
-app.put("/dish/:id", upload.single("image"), async (req, res) => {
-  try {
-    console.log("FILE 👉", req.file);
-    console.log("BODY 👉", req.body);
-
-    const pool = await poolPromise;
-    const d = req.body;
-
-     let imageId = null;
-    let imageName = null;
-
-if (req.file) {
-  imageId = uuidv4();
- imageName = req.file.filename;
- const imageBuffer = fs.readFileSync(req.file.path);
-  await pool.request()
-    .input("ImageId", sql.UniqueIdentifier, imageId)
-    .input("ImageName", sql.VarChar(100), req.file.filename)
-      .input("ImageData", sql.VarBinary(sql.MAX), imageBuffer)
-    .query(`
-      INSERT INTO ImageList (ImageId, ImageName,ImageData)
-      VALUES (@ImageId, @ImageName,@ImageData)
-    `);
-}
-
+    // 🔥 MODIFIER SAVE
     await pool.request()
-      .input("DishId", sql.UniqueIdentifier, req.params.id)
-      .input("DishCode", sql.NVarChar, d.DishCode || "")
-      .input("Name", sql.NVarChar, d.Name || "")
-      .input("ShortName", sql.NVarChar, d.ShortName || "")
-      .input("Description", sql.NVarChar, d.Description || "")
-      .input("DishGroupId", sql.UniqueIdentifier, d.DishGroupId || null)
-      .input("ImageId", sql.UniqueIdentifier, imageId)
-      .input("CurrentCost", sql.Decimal(18,2), Number(d.CurrentCost) || 0)
-      .input("SordCode", sql.Int, Number(d.SordCode) || 0)
-      .input("UnitCost", sql.Decimal(18,2), Number(d.UnitCost) || 0)
-      .input("QuantityOnHand", sql.Decimal(18,2), Number(d.QuantityOnHand) || 0)
+      .input("DishId", sql.UniqueIdentifier, dishId)
+      .query("DELETE FROM DishModifier WHERE DishId=@DishId");
 
-      .input("IsActive", sql.Bit, d.IsActive ?? false)
+    let mods = d.Modifiers ? JSON.parse(d.Modifiers) : [];
 
-      .query(`
-        UPDATE DishMaster SET
-          DishCode=@DishCode,
-          Name=@Name,
-          ShortName=@ShortName,
-          Description=@Description,
-          DishGroupId=@DishGroupId,
-          CurrentCost=@CurrentCost,
-          SordCode=@SordCode,
-          UnitCost=@UnitCost,
-          QuantityOnHand=@QuantityOnHand,
-          IsActive=@IsActive,
-          ImageId = COALESCE(@ImageId, ImageId), 
-          ModifiedOn=GETDATE()
-        WHERE DishId=@DishId
-      `);
+    for (let m of mods) {
+      await pool.request()
+        .input("DishId", sql.UniqueIdentifier, dishId)
+        .input("ModifierId", sql.UniqueIdentifier, m)
+        .query(`
+          INSERT INTO DishModifier (DishId, ModifierId)
+          VALUES (@DishId, @ModifierId)
+        `);
+    }
 
-    res.send("Updated ✅");
+    res.send("Saved ✅");
 
   } catch (err) {
-    console.error("UPDATE ERROR ❌", err);
+    console.error("ERROR ❌", err);
     res.status(500).send(err.message);
   }
 });
@@ -1425,7 +1383,43 @@ app.delete("/dish/:id", async (req, res) => {
   }
 });
 
-// ================= GET DISH MODIFIER =================
+//ADD / REMOVE Modifier(DISH  MODIFIER API)S
+app.post("/dishmodifier", async (req, res) => {
+  try {
+    const { DishId, ModifierId, checked } = req.body;
+    const pool = await poolPromise;
+
+    if (checked) {
+      // ✅ INSERT
+      await pool.request()
+        .input("DishId", sql.UniqueIdentifier, DishId)
+        .input("ModifierId", sql.UniqueIdentifier, ModifierId)
+        .query(`
+          INSERT INTO DishModifier
+          (DishId, ModifierId)
+          VALUES
+          (@DishId, @ModifierId)
+        `);
+    } else {
+      // ❌ DELETE
+      await pool.request()
+        .input("DishId", sql.UniqueIdentifier, DishId)
+        .input("ModifierId", sql.UniqueIdentifier, ModifierId)
+        .query(`
+          DELETE FROM DishModifier
+          WHERE DishId=@DishId
+          AND ModifierId=@ModifierId
+        `);
+    }
+
+    res.json({ message: "Dish Modifier updated successfully" });
+
+  } catch (err) {
+    console.log(err);
+    res.status(500).send("Error");
+  }
+});
+//GET Modifier List (DISH  MODIFIER API)
 app.get("/dishmodifier/:id", async (req, res) => {
   try {
     const pool = await poolPromise;
@@ -1446,8 +1440,7 @@ app.get("/dishmodifier/:id", async (req, res) => {
   }
 });
 
-
-// ================= GET DISH KITCHEN =================
+//GET Kitchen List (DISH  KITCHEN API)
 app.get("/dishkitchen/:id", async (req, res) => {
   try {
     const pool = await poolPromise;
@@ -1468,6 +1461,47 @@ app.get("/dishkitchen/:id", async (req, res) => {
   }
 });
 
+
+//insert dishkitchen
+
+app.post("/dishkitchen", async (req, res) => {
+  try {
+    const { DishId, KitchenTypeCode, KitchenTypeName, checked } = req.body;
+
+    const pool = await poolPromise; // 🔥 MISSING LINE (IMPORTANT)
+
+    if (checked) {
+      await pool.request()
+        .input("DishId", sql.UniqueIdentifier, DishId)
+        .input("KitchenTypeCode", sql.Int, KitchenTypeCode)
+        .input("KitchenTypeName", sql.VarChar(100), KitchenTypeName)
+        .query(`
+          IF NOT EXISTS (
+            SELECT 1 FROM DishKitchenType
+            WHERE DishId=@DishId AND KitchenTypeCode=@KitchenTypeCode
+          )
+          INSERT INTO DishKitchenType
+          (DishId, KitchenTypeCode, KitchenTypeName)
+          VALUES (@DishId, @KitchenTypeCode, @KitchenTypeName)
+        `);
+
+    } else {
+      await pool.request()
+        .input("DishId", sql.UniqueIdentifier, DishId)
+        .input("KitchenTypeCode", sql.Int, KitchenTypeCode)
+        .query(`
+          DELETE FROM DishKitchenType
+          WHERE DishId=@DishId AND KitchenTypeCode=@KitchenTypeCode
+        `);
+    }
+
+    res.send("OK");
+
+  } catch (err) {
+    console.log(err);
+    res.status(500).send(err.message);
+  }
+});
 
 
 
