@@ -1263,9 +1263,9 @@ if (req.file) {
         )
       `);
 
-        // 🔥 DELETE OLD KITCHEN
+        // 🔥 DELETE OLD dish tab KITCHEN
 await pool.request()
-  .input("DishId", sql.UniqueIdentifier, req.params.id)
+  .input("DishId", sql.UniqueIdentifier, dishId)
   .query("DELETE FROM DishKitchenType WHERE DishId=@DishId");
 
 // 🔥 INSERT NEW KITCHEN
@@ -1279,7 +1279,7 @@ if (d.KitchenTypes) {
 
 for (let k of kitchens) {
   await pool.request()
-    .input("DishId", sql.UniqueIdentifier, req.params.id)
+   .input("DishId", sql.UniqueIdentifier, dishId)
     .input("KitchenTypeCode", sql.Int, Number(k))
     .query(`
       INSERT INTO DishKitchenType
@@ -1289,9 +1289,9 @@ for (let k of kitchens) {
 }
 
 
-// 🔥 DELETE OLD MODIFIER
+// 🔥 DELETE OLD dish tab MODIFIER
 await pool.request()
-  .input("DishId", sql.UniqueIdentifier, req.params.id)
+  .input("DishId", sql.UniqueIdentifier, dishId)
   .query("DELETE FROM DishModifier WHERE DishId=@DishId");
 
 // 🔥 INSERT NEW MODIFIER
@@ -1305,7 +1305,7 @@ if (d.Modifiers) {
 
 for (let m of mods) {
   await pool.request()
-    .input("DishId", sql.UniqueIdentifier, req.params.id)
+    .input("DishId", sql.UniqueIdentifier, dishId)
     .input("ModifierId", sql.UniqueIdentifier, m)
     .query(`
       INSERT INTO DishModifier
