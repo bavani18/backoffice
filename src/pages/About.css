@@ -11,7 +11,7 @@ overflow-x:hidden;
 
 .cat-page{
 width:100%;
-padding:20px;
+padding: 28px 25px;
 box-sizing:border-box;
 }
 
@@ -22,15 +22,15 @@ margin-bottom:10px;
 
 /* New Button */
 
-.cat-btn-right{
+/* .cat-btn-right{
 display:flex;
 justify-content:flex-end;
 margin-bottom:10px;
-}
+} */
 
 .cat-new-btn{
 padding:8px 18px;
-background:#2c7be5;
+ background: linear-gradient(200deg, #4a4a74, #0a719e);
 color:white;
 border:none;
 cursor:pointer;
@@ -38,7 +38,7 @@ border-radius:4px;
 }
 
 .cat-new-btn:hover{
-background:#1a68d1;
+background: linear-gradient(200deg, #4a4a74, #0a719e);
 }
 
 /* Table */
@@ -50,18 +50,19 @@ table-layout:auto;
 }
 
 .cat-table th{
-background:#6f4a7e;
+/* background:#6f4a7e; */
+  background: linear-gradient(200deg, #1e1e2f, #043449);
 color:white;
 padding:12px;
 text-align:center;
 font-size:16px;
-border:1px solid #d0d0d0;   /* line added */
+border:1px solid #cfcfcf;   /* line added */
 }
 
 .cat-table td{
 padding:10px;
 text-align:left;
-border:1px solid #d0d0d0;   /* line */
+border:1px solid #cfcfcf;    /* line */
 }
 
 .cat-table-wrapper{
@@ -431,7 +432,7 @@ border:1px solid #ccc;
 border-radius:4px;
 }
 
-.kitchen-list{
+.kitchen-list1{
 display:grid;
 grid-template-columns:repeat(4,1fr);
 gap:8px;
@@ -441,9 +442,55 @@ padding:10px;
 border:1px solid #ccc;
 }
 
-.kitchen-item{
+.kitchen-item1{
 display:flex;
 align-items:center;
 gap:5px;
 font-size:14px;
+}
+
+.cat-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:10px;
+}
+
+.cat-title{
+  margin:0;
+}
+
+.cat-right{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.modal-loader {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #ccc;
+  border-top: 4px solid red;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: auto;
+}
+
+@keyframes spin {
+  100% {
+    transform: rotate(360deg);
+  }
 }

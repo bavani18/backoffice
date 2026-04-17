@@ -17,6 +17,9 @@ const [activeTab, setActiveTab] = useState("category");
 const [image,setImage] = useState(null);
 const fileInputRef = useRef(null);
 
+const [rowsPerPage, setRowsPerPage] = useState(10);
+const [currentPage, setCurrentPage] = useState(1);
+
 const [bgColor,setBgColor] = useState("#000000");
 const [textColor,setTextColor] = useState("#ff0000");
 
@@ -28,6 +31,11 @@ const [selectedModifiers,setSelectedModifiers] = useState([]);
 
 const [kitchens,setKitchens] = useState([]);
 const [selectedKitchens,setSelectedKitchens] = useState([]);
+
+const [filters, setFilters] = useState({});
+  const [activeFilter, setActiveFilter] = useState(null);
+
+  const [loading, setLoading] = useState(false);
 
 const filteredModifiers = modifiers.filter((m)=>
 m.ModifierName.toLowerCase().includes(search.toLowerCase())
@@ -69,10 +77,13 @@ return ()=>clearTimeout(timer);
 const fetchCategory = async () => {
 
    try {
+    setLoading(true);
     const res = await axios.get(`${BASE_URL}/category`);
     setEntries(res.data);
   } catch (err) {
     console.error("Category load error:", err);
+  }finally {
+    setLoading(false);  // 🔥 STOP
   }
 
 };
@@ -133,7 +144,9 @@ setForm({...row});
 // if(row.ImageName){
 // setImage(`${BASE_URL}/images/Dish/`+ row.ImageName);
 // }
-if(row.ImageData){
+setImage(null); // clear first
+
+if (row.ImageData) {
   setImage(row.ImageData);
 }
 
@@ -172,6 +185,7 @@ return;
 
 
 try{
+  setLoading(true);
 console.log("Update CategoryId:", form.CategoryId);
  // UPDATE
 if(editIndex !== null){
@@ -296,41 +310,98 @@ setSuccessMsg("Category saved successfully!");
 console.log(err.response?.data);
 alert(err.response?.data || "Save failed");
 
-}
+}finally {
+    setLoading(false);  // 🔥 STOP LOADER
+  }
+
 };
 
+ const filteredData = entries.filter((row) => {
+  return Object.keys(filters).every((key) => {
+    if (!filters[key]) return true;
+
+    let value = row[key];
+
+    // 🔥 boolean convert
+    if (typeof value === "boolean") {
+      value = value.toString();
+    }
+
+    return String(value)
+      .toLowerCase()
+      .includes(filters[key].toLowerCase());
+  });
+});
+
+const totalRows = filteredData.length;
+
+const totalPages = Math.ceil(totalRows / rowsPerPage);
+
+const showingFrom =
+  totalRows === 0 ? 0 : (currentPage - 1) * rowsPerPage + 1;
+
+const showingTo = Math.min(currentPage * rowsPerPage, totalRows);
+
+const paginatedData = filteredData.slice(
+  (currentPage - 1) * rowsPerPage,
+  currentPage * rowsPerPage
+);
 return(
 
 <div className="cat-page">
 
-<h1 className="cat-title">Category</h1>
+<div className="cat-header">
 
-{successMsg && (
-<div className="cat-success-msg">
-{successMsg}
-</div>
-)}
+  <h1 className="cat-title">Category</h1>
 
-<div className="cat-btn-right">
+  <div className="cat-right">
 
-<button
-className="cat-new-btn"
-onClick={()=>{
-setForm({
-...form,
-CategoryCode:generateCategoryCode()
-});
-setShowModal(true);
-}}
->
-New
-</button>
+    <button
+      className="cat-new-btn"
+      onClick={()=>{
+        setForm({
+          ...form,
+          CategoryCode:generateCategoryCode()
+        });
+        setShowModal(true);
+      }}
+    >
+      New
+    </button>
+
+    <select
+      className="rows-dropdown"
+      value={rowsPerPage}
+      onChange={(e) => {
+        const value = e.target.value;
+        if (value === "all") {
+          setRowsPerPage(filteredData.length);
+        } else {
+          setRowsPerPage(Number(value));
+        }
+        setCurrentPage(1);
+      }}
+    >
+      <option value={10}>10</option>
+      <option value={20}>20</option>
+      <option value={30}>30</option>
+      <option value={50}>50</option>
+      <option value="all">All</option>
+    </select>
+
+  </div>
 
 </div>
 
 {showModal && (
 
 <div className="cat-modal-overlay">
+
+   {loading && (
+    <div className="modal-loader">
+      <div className="spinner"></div>
+    </div>
+  )}
 
 <div className="cat-modal-content">
 
@@ -480,10 +551,20 @@ accept="image/*"
 ref={fileInputRef}
 style={{display:"none"}}
 onChange={(e)=>{
-if(e.target.files && e.target.files[0]){
-  console.log("FILE:", e.target.files[0]);
- setImage(e.target.files[0]);
-}
+  if(e.target.files && e.target.files[0]){
+
+    const selectedFile = e.target.files[0];
+
+    console.log("FILE:", selectedFile);
+
+    // ✅ ADD THIS VALIDATION
+    if (selectedFile.size > 10 * 1024 * 1024) {
+      alert("Image must be less than 10MB");
+      return;
+    }
+
+    setImage(selectedFile);
+  }
 }}
 />
 
@@ -673,10 +754,10 @@ await axios.post(`${BASE_URL}/categorymodifier`,{
 
 ) : (
 
-<div className="kitchen-list">
+<div className="kitchen-list1">
 
 {kitchens.map((k) => (
-<label key={k.KitchenTypeId} className="kitchen-item">
+<label key={k.KitchenTypeId} className="kitchen-item1">
 
 <input
 type="checkbox"
@@ -727,8 +808,8 @@ checked: checked
 
 <div className="cat-modal-buttons">
 
-<button type="submit" className="cat-save-btn">
-Save
+<button type="submit" className="cat-save-btn" disabled={loading}>
+  {loading ? "Saving..." : "Save"}
 </button>
 
 <button type="button" className="cat-cancel-btn" onClick={()=>setShowModal(false)}>
@@ -749,11 +830,67 @@ Cancel
 
 <thead>
 <tr>
-<th>Code</th>
-<th>Name</th>
-<th>Short</th>
+<th onClick={() => setActiveFilter("CategoryCode")}>
+  Code
+
+  {activeFilter === "CategoryCode" && (
+    <input
+      type="text"
+      onClick={(e) => e.stopPropagation()}
+      value={filters.CategoryCode || ""}
+      onChange={(e) =>
+        setFilters({ ...filters, CategoryCode: e.target.value })
+      }
+      placeholder="Search..."
+    />
+  )}
+</th>
+<th onClick={() => setActiveFilter("CategoryName")}>
+  Name
+
+  {activeFilter === "CategoryName" && (
+    <input
+      type="text"
+      onClick={(e) => e.stopPropagation()}
+      value={filters.CategoryName || ""}
+      onChange={(e) =>
+        setFilters({ ...filters, CategoryName: e.target.value })
+      }
+    />
+  )}
+</th>
+<th onClick={() => setActiveFilter("ShortName")}>
+  Short
+
+  {activeFilter === "ShortName" && (
+    <input
+      type="text"
+      onClick={(e) => e.stopPropagation()}
+      value={filters.ShortName || ""}
+      onChange={(e) =>
+        setFilters({ ...filters, ShortName: e.target.value })
+      }
+    />
+  )}
+</th>
 <th>Sort</th>
-<th>isActive</th>
+<th onClick={() => setActiveFilter("isActive")}>
+  isActive
+
+  {activeFilter === "isActive" && (
+    <select
+      onClick={(e) => e.stopPropagation()}
+      value={filters.isActive || ""}
+      onChange={(e) =>
+        setFilters({ ...filters, isActive: e.target.value })
+      }
+    >
+      <option value="">All</option>
+      <option value="true">Yes</option>
+      <option value="false">No</option>
+    </select>
+  )}
+</th>
 <th>Discount</th>
 <th>Kitchen</th>
 <th>Tax</th>
@@ -765,15 +902,22 @@ Cancel
 
 <tbody>
 
-{entries.length===0 ? (
-<tr>
-<td colSpan="11" style={{textAlign:"left"}}>
-No entries yet
-</td>
-</tr>
+{loading ? (
+  <tr>
+    <td colSpan="11">
+      <div className="spinner"></div>
+    </td>
+  </tr>
+
+) : filteredData.length === 0 ? (
+
+  <tr>
+    <td colSpan="11">No entries yet</td>
+  </tr>
+
 ) : (
 
-entries.map((row,index)=>(
+  paginatedData.map((row, index) => (
 <tr key={index} onClick={()=>handleEdit(index)} style={{cursor:"pointer"}}>
 <td>{row.CategoryCode}</td>
 <td>{row.CategoryName}</td>
@@ -794,6 +938,28 @@ entries.map((row,index)=>(
 </tbody>
 
 </table>
+
+<div className="pagination">
+
+  <button
+    disabled={currentPage === 1}
+    onClick={() => setCurrentPage(prev => prev - 1)}
+  >
+    Prev
+  </button>
+
+  <span>
+    page {showingFrom}–{showingTo} of {totalRows}
+  </span>
+
+  <button
+    disabled={currentPage === totalPages}
+    onClick={() => setCurrentPage(prev => prev + 1)}
+  >
+    Next
+  </button>
+
+</div>
 
 </div>
 

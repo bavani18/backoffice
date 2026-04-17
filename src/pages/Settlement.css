@@ -1,4 +1,4 @@
-.cashier-container{
+.settle-cashier-container{
 width:600px;            /* smaller container */
 margin:auto;
 background:white;
@@ -9,58 +9,58 @@ font-size:12px;
 position:relative;   /* important for button positioning */
 }
  
-.top-row{
+.settle-top-row{
 display:flex;
 gap:6px;
 margin-bottom:6px;
 }
  
-.top-row select,
-.top-row input{
+.settle-top-row select,
+.settle-top-row input{
 height:24px;
 font-size:11px;
 padding:2px 4px;
 }
  
-.main-grid{
+.settle-main-grid{
 display:flex;
 gap:10px;
 }
  
-.left-panel{
+.settle-left-panel{
 width:50%;
 }
  
-.right-panel{
+.settle-right-panel{
 width:50%;
 }
  
 /* SUMMARY TABLE */
  
-.summary-table{
+.settle-summary-table{
 width:100%;
 border-collapse:collapse;
 table-layout:fixed;
 }
  
-.summary-table td{
+.settle-summary-table td{
 border:1px solid #28a745;
 padding:4px;
 }
  
-.summary-table td:first-child{
+.settle-summary-table td:first-child{
 width:65%;
 text-align:left;
 background:#ffffff;
 font-size:12px;
 }
  
-.summary-table td:last-child{
+.settle-summary-table td:last-child{
 width:35%;
 text-align:right;
 }
  
-.summary-table input{
+.settle-summary-table input{
 width:100%;
 height:20px;
 text-align:right;
@@ -69,55 +69,55 @@ padding:2px;
 box-sizing:border-box;
 }
  
-.bold{
+.settle-bold{
 font-weight:bold;
 }
  
 /* COMMON TABLE */
  
-.table{
+.settle-table{
 width:100%;
 border-collapse:collapse;
 margin-top:6px;
 font-size:11px;
 }
  
-.table th{
-background:#6d477d;
+.settle-table th{
+background: linear-gradient(200deg, #1e1e2f, #043449);
 color:white;
 border:1px solid #28a745;
 padding:4px;
 text-align:center;
 }
  
-.table td{
+.settle-table td{
 border:1px solid #28a745;
 padding:4px;
 text-align:center;
 }
  
-.table input{
+.settle-table input{
 width:60px;
 height:20px;
 font-size:11px;
 }
  
-.sales-box{
+.settle-sales-box{
 margin-top:10px;
 }
  
-.total-box{
+.settle-total-box{
 margin-top:6px;
 }
  
-.total-box input{
+.settle-total-box input{
 height:22px;
 font-size:11px;
 }
  
 /* CLOSE BUTTON RIGHT BOTTOM */
  
-.close-btn{
+.settle-close-btn{
 position:absolute;
 right:10px;
 bottom:10px;

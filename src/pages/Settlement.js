@@ -24,10 +24,15 @@ export default function Settlement() {
   useEffect(() => {
   fetchData();
 }, []);
-
 const fetchData = async () => {
   try {
-    const res = await axios.get(`${BASE_URL}/api/total-sales/SR`);
+    const terminal = "SR";
+    const userId = "123";
+
+    // ✅ TOTAL API
+    const res = await axios.get(
+      `${BASE_URL}/api/settlement/totals/${terminal}`
+    );
 
     setSettlement({
       SubTotal: res.data.SubTotal,
@@ -36,8 +41,33 @@ const fetchData = async () => {
       TotalTax: res.data.TotalTax,
       RoundedBy: res.data.RoundedBy,
       Tips: res.data.Tips,
-      TotalPax: res.data.InvoiceCount,
+      TotalPax: res.data.TotalPax || 0,
     });
+
+    // ✅ PAYMENT API
+    const payRes = await axios.get(
+      `${BASE_URL}/api/settlement/payment/${terminal}/${userId}`
+    );
+
+    setSalesSummary(
+      payRes.data.map(p => ({
+        Paymode: p.PaymodeName,
+        ManualAmount: p.SysAmount
+      }))
+    );
+
+    // ✅ TRANSACTION API
+    const tranRes = await axios.get(
+      `${BASE_URL}/api/settlement/transactions/${terminal}/${userId}`
+    );
+
+    setTransactions(
+      tranRes.data.map(t => ({
+        Paymode: t.TransactionMode,
+        CashIn: t.TransactionType === "Cash In" ? t.Amount : 0,
+        CashOut: t.TransactionType === "Cash Out" ? t.Amount : 0,
+      }))
+    );
 
   } catch (err) {
     console.error("API Error ❌", err);
@@ -146,10 +176,10 @@ const fetchData = async () => {
   };
 
   return (
-    <div className="cashier-container">
+    <div className="settle-cashier-container">
       <h2>Cashier Settlement</h2>
 
-      <div className="top-row">
+      <div className="settle-top-row">
         <label>Terminal</label>
         <select>
           <option value="SR">SR</option>
@@ -158,10 +188,10 @@ const fetchData = async () => {
         <input value={dateTime} readOnly />
       </div>
 
-      <div className="main-grid">
+      <div className="settle-main-grid">
         {/* LEFT PANEL */}
-        <div className="left-panel">
-          <table className="summary-table">
+        <div className="settle-left-panel">
+          <table className="settle-summary-table">
             <tbody>
               {[
                 { label: "Sales Total", field: "SubTotal" },
@@ -185,7 +215,7 @@ const fetchData = async () => {
                 </tr>
               ))}
 
-              <tr className="bold">
+              <tr className="settle-bold">
                 <td>Net Sales</td>
                 <td>
                   <input name="NetSales" value={netSales()} readOnly />
@@ -196,7 +226,7 @@ const fetchData = async () => {
 
           <h3>Transactions</h3>
 
-          <table className="table">
+          <table className="settle-table">
             <thead>
               <tr>
                 <th>Paymode</th>
@@ -232,14 +262,14 @@ const fetchData = async () => {
             </tbody>
           </table>
 
-          <div className="bottom-zero">0.00</div>
+          <div className="settle-bottom-zero">0.00</div>
         </div>
 
         {/* RIGHT PANEL */}
-        <div className="right-panel">
+        <div className="settle-right-panel">
           <h3>Sales Summary</h3>
 
-          <table className="table">
+          <table className="settle-table">
             <thead>
               <tr>
                 <th>Paymode</th>
@@ -264,10 +294,10 @@ const fetchData = async () => {
             </tbody>
           </table>
 
-          <div className="sales-box">
+          <div className="settle-sales-box">
             <h3>Sales</h3>
 
-            <table className="table">
+            <table className="settle-table">
               <thead>
                 <tr>
                   <th>Paymode</th>
@@ -286,7 +316,7 @@ const fetchData = async () => {
             </table>
           </div>
 
-          <div className="total-box">
+          <div className="settle-total-box">
             Total
             <input
               value={salesSummary
@@ -297,7 +327,7 @@ const fetchData = async () => {
           </div>
 
           {/* ✅ UPDATED CLOSE BUTTON */}
-          <button className="close-btn" onClick={handleClose}>
+          <button className="settle-close-btn" onClick={handleClose}>
             Close (Esc)
           </button>
         </div>

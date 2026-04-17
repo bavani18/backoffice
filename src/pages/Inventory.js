@@ -9,6 +9,7 @@ function Inventory() {
   const [showModal, setShowModal] = useState(false);
   const [inventoryList, setInventoryList] = useState([]);
   const [editIndex, setEditIndex] = useState(null);
+  const [editId, setEditId] = useState(null);
 
   const [item, setItem] = useState({
     itemCode: "",
@@ -48,40 +49,82 @@ function Inventory() {
   };
 
   const handleSave = async () => {
-    try {
-      if (editIndex !== null) {
-        const id = inventoryList[editIndex].InventoryId;
+  try {
+    if (editIndex !== null) {
 
-        await fetch(`${BASE_URL}/inventory/${id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            Description: item.description,
-            Price: item.price
-          })
-        });
+     const id = editId;
 
-      } else {
-        await fetch(`${BASE_URL}/inventory`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            InventoryCode: item.itemCode,
-            Description: item.description,
-            Price: item.price
-          })
-        });
+      console.log("ID 👉", id);
+
+      const res = await fetch(`${BASE_URL}/inventory/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          Description: item.description,
+          InventoryGroup: item.inventoryGroup || "",
+          BrandId: item.brand || null,
+          Uom: item.uom || "",
+          Price: item.price || 0,
+          GrossCost: item.grossCost || 0,
+          CurrentCost: item.avgCost || 0,
+          QuantityOnHand: 0,
+          IsActive: item.active,
+          SordCode: item.sortCode || 0,
+          ShortName: item.description || "",
+          isDiscountAllowed: item.discountAllowed,
+          VendorId: item.vendor || null
+        })
+      });
+
+      const data = await res.json();
+
+      console.log("STATUS 👉", res.status);
+      console.log("RESPONSE 👉", data);
+
+      if (!res.ok) {
+        alert("Update failed ❌");
+        return;
       }
 
-      fetchInventory();
-      setShowModal(false);
-      setEditIndex(null);
-      resetForm();
+    } else {
 
-    } catch (err) {
-      console.error("SAVE ERROR ❌", err);
+    const payload = {
+  InventoryCode: item.itemCode || "",
+  Description: item.description || "",
+  InventoryGroup: item.inventoryGroup || "",
+  BrandId: item.brand || "00000000-0000-0000-0000-000000000000",
+  Uom: item.uom || "",
+  Price: Number(item.price) || 0,
+  GrossCost: Number(item.grossCost) || 0,
+  CurrentCost: Number(item.avgCost) || 0,
+  QuantityOnHand: 0,
+  IsActive: item.active ?? true,
+  SordCode: Number(item.sortCode) || 0,
+  ShortName: item.description || "",
+  isDiscountAllowed: item.discountAllowed ?? false,
+  VendorId: item.vendor || "00000000-0000-0000-0000-000000000000"
+};
+
+      await fetch(`${BASE_URL}/inventory`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
     }
-  };
+
+    // ✅ COMMON SUCCESS
+    setTimeout(() => {
+      fetchInventory();
+    }, 500);
+
+    setShowModal(false);
+    setEditIndex(null);
+    resetForm();
+
+  } catch (err) {
+    console.error("SAVE ERROR ❌", err);
+  }
+};
 
   const resetForm = () => {
     setItem({
@@ -103,6 +146,10 @@ function Inventory() {
   const handleEdit = (index) => {
     const data = inventoryList[index];
 
+     
+     setEditIndex(index);   
+     setEditId(data.InventoryId);
+
     setItem({
       itemCode: data.InventoryCode,
       description: data.Description,
@@ -118,16 +165,17 @@ function Inventory() {
       avgCost: data.CurrentCost
     });
 
-    setEditIndex(index);
+   setEditId(data.InventoryID);  // 🔥 IMPORTANT
     setShowModal(true);
   };
 
   return (
     <div className="inventory-container">
-      <h1 className="title">Inventory</h1>
+        <div className="inventory-header">
+      <h1 className="inventory-title">Inventory</h1>
 
       <button
-        className="new-btn"
+        className="in-new-btn"
         onClick={() => {
           resetForm();
           setShowModal(true);
@@ -135,7 +183,7 @@ function Inventory() {
       >
         New
       </button>
-
+</div>
       <table className="inventory-table">
         <thead>
           <tr>

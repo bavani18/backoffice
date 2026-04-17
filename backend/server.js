@@ -133,7 +133,7 @@ app.get("/kitchen", async (req, res) => {
     // Base query
     let query = `
       SELECT KitchenTypeId, KitchenTypeCode, KitchenTypeName, isActive
-      FROM Kitchen
+      FROM Kitchen 
     `;
 
     // Add WHERE only if KitchenTypeCode is provided
@@ -141,7 +141,7 @@ app.get("/kitchen", async (req, res) => {
       query += " WHERE KitchenTypeCode = @KitchenTypeCode";
     }
 
-    query += " ORDER BY KitchenTypeCode";
+    query += " ORDER BY KitchenTypeCode DESC";
 
     const request = pool.request();
 
@@ -338,8 +338,8 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage,
   limits: {
-    fileSize: 10 * 1024 * 1024,   // ✅ 10MB image
-    fieldSize: 10 * 1024 * 1024   // ✅ FIX for "Field value too long"
+    fileSize: 20 * 1024 * 1024,   // ✅ 10MB image
+    fieldSize: 20 * 1024 * 1024   // ✅ FIX for "Field value too long"
   }
 });
 
@@ -353,7 +353,7 @@ app.get("/category", async (req, res) => {
                   (SELECT I.ImageData
                   from ImageList I
                   where  C.ImageId = I.ImageId) ImageData
-                  FROM CategoryMaster C;`;
+                  FROM CategoryMaster C ORDER BY CategoryCode DESC;`;
 
     if (CategoryCode) query += " WHERE CategoryCode = @CategoryCode";
     const request = pool.request();
@@ -791,7 +791,7 @@ app.get("/dishgroup", async (req, res) => {
                   from ImageList I
                   where  C.ImageId = I.ImageId) ImageData
       FROM DishGroupMaster C
-      ORDER BY C.DishGroupCode
+     ORDER BY C.DishGroupCode DESC
     `);
 
  const data = result.recordset.map(row => {
@@ -861,6 +861,24 @@ app.post("/dishgroup", upload.single("image"), async (req, res) => {
 
     const pool = await poolPromise;
 
+     app.get("/dishgroup/nextcode", async (req, res) => {
+  try {
+    const pool = await poolPromise;
+
+    const result = await pool.request().query(`
+      SELECT 
+        ISNULL(MAX(TRY_CAST(DishGroupCode AS INT)), 0) + 1 AS NewCode
+      FROM DishGroupMaster
+    `);
+
+    res.json({ code: result.recordset[0].NewCode });
+
+  } catch (err) {
+    console.log("NEXTCODE ERROR:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
     let imageId = null;
 
 if (req.file) {
@@ -888,7 +906,7 @@ const imageBuffer = fs.readFileSync(req.file.path);
       // 🔄 UPDATE
       await pool.request()
         .input("DishGroupId", sql.UniqueIdentifier, dgId)
-        .input("DishGroupCode", sql.VarChar(20), DishGroupCode)
+        .input("DishGroupCode", sql.Int, DishGroupCode)
         .input("DishGroupName", sql.VarChar(100), DishGroupName)
         .input("SortCode", sql.Int, SortCode)
         .input("isActive", sql.Bit, isActive == 1)
@@ -928,7 +946,7 @@ const imageBuffer = fs.readFileSync(req.file.path);
       // 🆕 INSERT
       await pool.request()
         .input("DishGroupId", sql.UniqueIdentifier, dgId)
-        .input("DishGroupCode", sql.VarChar(20), DishGroupCode)
+        .input("DishGroupCode", sql.Int, newCode)
         .input("DishGroupName", sql.VarChar(100), DishGroupName)
         .input("SortCode", sql.Int, SortCode)
         .input("isActive", sql.Bit, isActive == 1)
@@ -974,7 +992,7 @@ for (let k of kitchens) {
   await pool.request()
     .input("DishGroupId", sql.UniqueIdentifier, dgId)
     .input("KitchenTypeCode", sql.Int, k.KitchenTypeCode)
-    .input("KitchenTypeName", sql.VarChar(100), k.KitchenTypeName)
+    .input("KitchenTypeName", sql.VarChar(100), k.KitchenTypeName || "")
     .query(`
       INSERT INTO DishGroupKitchenType
       (DishGroupId,KitchenTypeCode,KitchenTypeName)
@@ -1328,7 +1346,7 @@ app.post("/dish", upload.single("image"), async (req, res) => {
       .input("DishId", sql.UniqueIdentifier, dishId)
       .query("DELETE FROM DishKitchenType WHERE DishId=@DishId");
 
-   let kitchens = [];
+ let kitchens = [];
 
 try {
   kitchens = d.KitchenTypes
@@ -1338,7 +1356,6 @@ try {
   console.log("Kitchen parse error ❌", d.KitchenTypes);
   kitchens = [];
 }
-
     for (let k of kitchens) {
       await pool.request()
         .input("DishId", sql.UniqueIdentifier, dishId)
@@ -1355,7 +1372,7 @@ try {
       .input("DishId", sql.UniqueIdentifier, dishId)
       .query("DELETE FROM DishModifier WHERE DishId=@DishId");
 
-   let mods = [];
+let mods = [];
 
 try {
   mods = d.Modifiers ? JSON.parse(d.Modifiers) : [];
@@ -1540,7 +1557,8 @@ app.get("/modifiermaster", async (req, res) => {
     DishCost,
     isOpenModifier
   FROM ModifierMaster
-  ORDER BY ModifierName
+  ORDER BY 
+  CAST(SUBSTRING(ModifierCode, 3, 10) AS INT) DESC
 `);
 
     res.json(result.recordset);
@@ -1550,6 +1568,27 @@ app.get("/modifiermaster", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+app.get("/modifiermaster/nextcode", async (req, res) => {
+  try {
+    const pool = await poolPromise;
+
+    const result = await pool.request().query(`
+      SELECT 
+        'M_' + RIGHT('00000000' + 
+          CAST(ISNULL(MAX(CAST(SUBSTRING(ModifierCode, 3, 10) AS INT)), 0) + 1 AS VARCHAR), 
+        8) AS NewModifierCode
+      FROM ModifierMaster
+    `);
+
+    res.json({ code: result.recordset[0].NewModifierCode });
+
+  } catch (err) {
+    console.log(err);
+    res.status(500).send("Error");
+  }
+});
+
 //modifier post
 app.post("/modifiermaster", async (req, res) => {
   try {
@@ -1570,11 +1609,23 @@ app.post("/modifiermaster", async (req, res) => {
     }
 
     const pool = await poolPromise;
-    const modId = uuidv4();
+
+//🔥 AUTO GENERATE CODE HERE
+const codeResult = await pool.request().query(`
+  SELECT 
+    'M_' + RIGHT('00000000' + 
+      CAST(ISNULL(MAX(CAST(SUBSTRING(ModifierCode, 3, 10) AS INT)), 0) + 1 AS VARCHAR), 
+    8) AS NewModifierCode
+  FROM ModifierMaster
+`);
+
+const newCode = codeResult.recordset[0].NewModifierCode;
+
+const modId = uuidv4();
 
     await pool.request()
       .input("ModifierId", sql.UniqueIdentifier, modId) 
-      .input("ModifierCode", sql.VarChar(50), ModifierCode || "")
+      .input("ModifierCode", sql.VarChar(50), newCode)
       .input("ModifierName", sql.NVarChar(100), ModifierName || "")
       .input(
         "ConflictId",

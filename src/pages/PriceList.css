@@ -1,0 +1,169 @@
+/* 🌐 Page Layout */
+body {
+  margin: 0;
+  font-family: "Segoe UI", sans-serif;
+  background: #f4f6f9;
+  padding: 25px 10px;
+}
+ 
+/* Page */
+/* .PriceList-page {
+  padding: 20px 10px;
+} */
+ 
+.PriceList-container {
+  display: flex;
+  justify-content: center;
+}
+ 
+/* Title */
+.PriceList-title {
+  font-size: 26px;
+  font-weight: 600;
+  margin-bottom: 5px;
+}
+ 
+/* Layout */
+.PriceList-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+  width: 70%;
+}
+ 
+/* Table Title */
+.PriceList-table-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+ 
+/* Table */
+.PriceList-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid #cbd5e1;
+}
+ 
+.PriceList-table th {
+ background: linear-gradient(200deg, #1e1e2f, #043449);
+  color: #fff;
+  padding: 12px;
+  text-align: center;
+  border: 1px solid #5a3e68;
+}
+ 
+.PriceList-table td {
+  padding: 12px;
+  text-align: left;
+  border: 1px solid #cbd5e1;
+}
+ 
+/* .PriceList-table th,
+.PriceList-table td {
+  text-align: center;
+} */
+ 
+.PriceList-table tr:hover {
+  background: #f1f5ff;
+}
+ 
+.PriceList-active-row {
+  background: #dbeafe;
+}
+ 
+/* Form */
+.PriceList-form-group {
+  margin-bottom: 15px;
+}
+ 
+.PriceList-form-group label {
+  display: block;
+  margin-bottom: 5px;
+}
+ 
+.PriceList-form-group input {
+  width: 70%;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+ 
+/* Checkbox */
+.PriceList-checkbox {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+ 
+/* 🔥 BUTTONS FIXED (RIGHT + BOTTOM) */
+.PriceList-btn-group {
+  display: flex;
+  justify-content: flex-end;   /* 👉 right align */
+  align-items: flex-end;
+  gap: 10px;
+  margin-top: 30px;
+}
+ 
+/* Buttons */
+.PriceList-btn {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  cursor: pointer;
+}
+ 
+.PriceList-btn-new {
+background: linear-gradient(200deg, #4a4a74, #0a719e);
+}
+ 
+.PriceList-btn-save {
+  background: #16a34a;
+}
+ 
+.PriceList-btn-close {
+  background: #dc2626;
+}
+ 
+/* Header with New button */
+.PriceList-table-header {
+  display: flex;
+  justify-content: space-between; /* 🔥 left + right */
+  align-items: center;
+  margin-bottom: 15px;
+}
+/* Modal overlay */
+.PriceList-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+ 
+/* 🔥 MODAL BOX FIX */
+.PriceList-modal-box {
+  background: #fff;
+  padding: 25px;
+  border-radius: 10px;
+  width: 350px;
+ 
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;  /* 👉 push buttons bottom */
+}
+ 
+/* 🔥 MODAL BUTTONS RIGHT + BOTTOM */
+.PriceList-modal-btn-group {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: auto;   /* 👉 bottom stick */
+}
+
+ 

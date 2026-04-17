@@ -1,83 +1,180 @@
+/* PAGE CENTER */
 .login-page {
   height: 100vh;
-  width: 100%;
-
   display: flex;
-  justify-content: flex-end;   /* ✅ right side */
-  align-items: center;         /* ✅ vertical center */
-
-  padding-right: 50px;         /* ✅ right gap */
-
-  /* FULL BACKGROUND IMAGE */
-  background-image: url("../assets/food.jpg");
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
+  justify-content: center;
+  align-items: center;
+  background: #1e1e2f;
 }
 
-/* SMALL LOGIN CARD */
+/* 🔥 OUTER GLOW FRAME */
+.login-wrapper {
+  position: relative;
+  padding: 40px;
+  border-radius: 30px;
+}
+
+/* 🔥 NEON BORDER EFFECT */
+.login-wrapper::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+
+  border-radius: 30px;
+  padding: 2px;
+
+  background: linear-gradient(
+    270deg,
+    #00f2ff,
+    #ff00ff,
+    #00f2ff,
+    #ff00ff
+  );
+
+  background-size: 400% 400%;
+
+  /* 🔥 RUNNING EFFECT */
+  animation: borderMove 4s linear infinite,
+             glowBlink 1.5s ease-in-out infinite alternate;
+
+  -webkit-mask: 
+    linear-gradient(#000 0 0) content-box, 
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+
+/* 🔥 Color Running */
+@keyframes borderMove {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 100% 50%; }
+}
+
+/* 🔥 Glow Blinking */
+@keyframes glowBlink {
+  from {
+    box-shadow: 
+      0 0 10px #00f2ff,
+      0 0 10px #ff00ff;
+  }
+  to {
+    box-shadow: 
+      0 0 25px #00f2ff,
+      0 0 25px #ff00ff;
+  }
+}
+
+/* INNER DARK CARD */
 .login-card {
-  width: 300px;          /* ✅ small size */
-  padding: 22px;
-  margin-right: 100px;
-  background: rgb(255, 255, 255);
-  border-radius: 15px;
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.25);
-  backdrop-filter: blur(6px);
-}
-
-/* title */
-.login-title {
-  font-size: 22px;
-  margin-bottom: 5px;
+  position: relative;
+  width: 260px;
+  padding: 30px;
+  border-radius: 20px;
+  background: #111;
   text-align: center;
+  z-index: 1;
+
+  box-shadow:
+    inset 0 0 20px rgba(0,0,0,0.8),
+    0 0 10px rgba(255,255,255,0.05);
 }
 
-.login-subtitle {
-  text-align: center;
-  font-size: 13px;
-  margin-bottom: 18px;
-  color: #bc9102;
+/* TITLE */
+.title {
+  color: #ff00ff;
+  letter-spacing: 3px;
+  margin-bottom: 20px;
 }
 
+/* INPUT */
 .login-form input {
-  width: 90%;
+  width: 100%;
   padding: 10px;
   margin-bottom: 12px;
-  border-radius: 50px;
-  border: 1px solid #0e0c0c;
+  border-radius: 12px;
+  border: none;
+  background: #1e1e2f;
+  color: white;
   outline: none;
-  font-size: 14px;
 }
 
+/* INPUT FOCUS */
+.login-form input:focus {
+  box-shadow: 0 0 6px #00f2ff;
+}
+
+/* BUTTON */
 .login-btn {
   width: 100%;
   padding: 10px;
+  border-radius: 20px;
   border: none;
-  background-image: url("../assets/ezgif.com-gif-maker-1-copy.webp");
-   margin-bottom: 12px;
-  border-radius: 50px;
-  background: #bc9102;
-  color: rgb(250, 250, 250);
-  font-size: 14px;
+  background: linear-gradient(90deg, #00c6ff, #ff00ff);
+  color: white;
   font-weight: bold;
   cursor: pointer;
+  transition: 0.3s;
 }
 
 .login-btn:hover {
-  background: #bc9102;
+  transform: scale(1.05);
+  box-shadow: 0 0 12px #ff00ff;
+}
+
+/* LINKS */
+.forgot {
+  margin-top: 10px;
+  color: #888;
+  font-size: 12px;
+}
+
+.signup {
+  margin-top: 10px;
+  font-size: 13px;
+  color: #ccc;
+}
+
+.signup span {
+  color: #ff00ff;
 }
 
 .login-logo {
-  width: 250px;          /* small size */
-  height: 90px;
-  object-fit: cover;
-  border-radius: 20%;   /* round image */
+  width: 100px;           /* 👈 little smaller = clean */
+  margin-bottom: 6px;    /* 👈 reduce gap */
   display: block;
-  margin: 0 auto 15px;  /* center + bottom gap */
+    padding-top: 5px;
+
+  /* 🔥 make it bright */
+  filter: brightness(1.8) contrast(1.3) saturate(1.2);
+
+ }
+
+.login-brand-name {
+  text-align: center;
+  font-size: 18px;
+  /* font-weight: bold; */
+
+  /* margin-bottom: 20px; */
+
+  /* 🔥 gradient text */
+  background: linear-gradient(90deg, #00f2ff, #ff00ff);
+  -webkit-background-clip: text;
+  /* -webkit-text-fill-color: transparent; */
+  color: transparent;
+
+  letter-spacing: 1px;
+  font-weight: 600;
+  margin: 0;            
+  color: transparent;
 }
 
- /* .login-logo {
-  width: 60px;
-  height: 60px;
-} */
+/* 🔥 GROUP LOGO + NAME */
+.login-brand-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  margin-bottom: 20px;
+}
+

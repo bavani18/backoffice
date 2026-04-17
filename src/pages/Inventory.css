@@ -1,18 +1,21 @@
 .inventory-container {
-  padding: 20px;
-  background: #ffffff;
-  min-height: 100vh;
+ position: relative;
+   top: 30px;
 }
 
-.title {
-  text-align: center;
-  margin-bottom: 20px;
+.inventory-title {
+  text-align: left;
+   margin: 0; 
 }
-
-.new-btn {
+.inventory-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.in-new-btn {
   float: right;
   padding: 8px 14px;
-  background: #1976d2;
+ background: linear-gradient(200deg, #4a4a74, #0a719e);
   color: white;
   border: none;
   cursor: pointer;
@@ -25,16 +28,16 @@
 }
 
 .inventory-table th {
-  background: #6f4b7f;
+  background: linear-gradient(200deg, #1e1e2f, #043449);
   color: white;
   padding: 10px;
-  border:1px solid #d0d0d0; 
+  border:1px solid #c7c7c7; 
 }
 
 .inventory-table td {
   padding: 10px;
   border: 1px solid #ddd;
-  border:1px solid #d0d0d0; 
+  border:1px solid #cfcfcf; 
 }
 
 /* Modal */

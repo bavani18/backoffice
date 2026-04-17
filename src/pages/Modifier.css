@@ -1,19 +1,26 @@
 .modifier-container {
-width:100%;
-/* padding:5px; */
-box-sizing:border-box;
-font-family:"Segoe UI",Tahoma,sans-serif;
+  position: relative;
+   top: 10px;
 }
 
-.modifier-title{
-font-size:28px;
-margin-bottom:10px;
+.modifier-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-.new-btn {
+.modifier-title {
+  margin: 0;
+}
+
+
+.modifier-main-content {
+  padding-top: 60;   /* 👈 navbar height */
+}
+.modifier-new-btn {
   float: right;
   padding: 8px 14px;
-  background: #1976d2;
+ background: linear-gradient(200deg, #4a4a74, #0a719e);
   color: white;
   border: none;
   cursor: pointer;
@@ -26,7 +33,7 @@ margin-bottom:10px;
 }
 
 .modifier-table th{
-  background:#6f4a7d;
+background: linear-gradient(200deg, #1e1e2f, #043449);
   color:white;
   padding:12px;
   /* border-bottom:3px solid #dcdcdc;;   header strong line */
@@ -50,7 +57,7 @@ margin-bottom:10px;
 
 /* Modal */
 
-.modal-overlay-md {
+.modifier-modal-overlay-md {
   position: fixed;
   top: 0;
   left: 0;
@@ -62,7 +69,7 @@ margin-bottom:10px;
   align-items: center;
 }
 
-.modal-box-md h2{
+.modifier-modal-box-md h2{
 margin-bottom:20px;
 }
 
@@ -72,20 +79,20 @@ flex-direction:column;
 gap:14px;
 }
 
-.form-row{
+.modifier-form-row{
 display:grid;
 grid-template-columns:160px 1fr;
 align-items:center;
 margin-bottom:10px;
 }
 
-.form-row label{
+.modifier-form-row label{
 font-weight:600;
 font-size:15px;
 }
 
-.form-row input,
-.form-row select{
+.modifier-form-row input,
+.modifier-form-row select{
 padding:8px;
 border:1px solid #ccc;
 border-radius:4px;
@@ -95,7 +102,7 @@ width:100%;
 .checkbox-row{
 display:flex;
 align-items:center;
-gap:20px;
+gap:10px;
 margin-top:10px;
 }
 
@@ -108,7 +115,7 @@ font-weight:500;
 font-weight:500;
 }
 
-.modal-box-md {
+.modifier-modal-box-md {
 width:520px;
 background:#fff;
 padding:30px;
@@ -116,7 +123,7 @@ border-radius:8px;
 box-shadow:0 4px 15px rgba(0,0,0,0.2);
 }
 
-.form-grid {
+.modifier-form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
@@ -145,13 +152,13 @@ background:#f8f8f8;
 }
 
 
-.amount-input{
+.modifier-amount-input{
 width:80px;
 padding:4px;
 }
 
-.form-grid input,
-.form-grid select {
+.modifier-form-grid input,
+.modifier-form-grid select {
   padding: 8px;
 }
 
@@ -172,7 +179,7 @@ font-weight:500;
 margin:0;
 }
 
-.modal-buttons-md{
+.modifier-modal-buttons-md{
 display:flex;
 justify-content:flex-end;
 gap:12px;
@@ -180,7 +187,7 @@ margin-top:25px;
 }
 
 
-.save-btn-md{
+.modifier-save-btn-md{
 background:#1f8f3a;
 color:white;
 border:none;
@@ -190,7 +197,7 @@ cursor:pointer;
 font-weight:600;
 }
 
-.cancel-btn-md{
+.modifier-cancel-btn-md{
 background:#e11414;
 color:white;
 border:none;
@@ -200,25 +207,35 @@ cursor:pointer;
 font-weight:600;
 }
 
-.price-section{
-display:flex;
-align-items:center;
-gap:10px;
+.price-section {
+  display: flex;
+  align-items: center;
+  gap: 15px;
 }
 
-.price-box{
-display:flex;
-align-items:center;
-gap:10px;
-border:1px solid #ccc;
-padding:8px 12px;
-border-radius:6px;
-background:#f7f7f7;
+.checkbox-inline {
+  display: flex;
+  align-items: center;
+  gap: 2px;
 }
 
-.amount-input{
-width:80px;
-padding:5px;
+.price-box {
+  display: flex;
+  align-items: center;   /* ✅ vertical center */
+  justify-content: space-between; /* ✅ proper spacing */
+  gap: 12px;
+
+  border: 1px solid #ccc;
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: #f7f7f7;
+
+  width: 260px;   /* ✅ FIXED WIDTH (important) */
+}
+
+.amount-input {
+  width: 80px;
+  padding: 5px;
 }
 
 .price-box input{

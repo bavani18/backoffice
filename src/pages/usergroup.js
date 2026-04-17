@@ -3,43 +3,43 @@ import "./usergroup.css";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { BASE_URL } from "../config/api";
-
+ 
 export default function UserGroup() {
-
+ 
   const navigate = useNavigate();
-
+ 
   const [groups, setGroups] = useState([]);
   const [selectedIndex, setSelectedIndex] = useState(null);
   const [showModal, setShowModal] = useState(false);
-  
-
-  // ✅ COLUMN NAME CHANGED
+ 
   const initialFormData = {
-    userGroupId: null,
-    userGroupCode: "",
-    userGroupName: "",
-    isActive: true,
-    createdUser: "",
-    createddate: "",
-    modifyUser: "",
+    id: null,
+    code: "",
+    name: "",
+    active: true,
+    createdDate: "",
     modifyDate: "",
   };
-
+ 
   const [formData, setFormData] = useState(initialFormData);
-
+ 
+  // =============================
+  // 🔥 FETCH GROUPS
+  // =============================
   const fetchGroups = async () => {
     try {
-      const res = await axios.get(`${BASE_URL}/usergroup`);
+      const res = await axios.get(`${BASE_URL}/api/usergroup`); // ✅ PORT FIX
       setGroups(res.data);
     } catch (err) {
       console.log("Fetch error:", err);
     }
   };
-
+ 
   useEffect(() => {
     fetchGroups();
   }, []);
-
+ 
+  // ESC close
   useEffect(() => {
     const esc = (e) => {
       if (e.key === "Escape") setShowModal(false);
@@ -47,75 +47,101 @@ export default function UserGroup() {
     window.addEventListener("keydown", esc);
     return () => window.removeEventListener("keydown", esc);
   }, []);
-
+ 
+  // =============================
+  // SELECT ROW (EDIT)
+  // =============================
   const handleSelect = (index) => {
     setSelectedIndex(index);
     setFormData(groups[index]);
     setShowModal(true);
   };
-
+ 
+  // =============================
+  // INPUT CHANGE
+  // =============================
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-
+ 
     setFormData({
       ...formData,
       [name]: type === "checkbox" ? checked : value,
     });
   };
-
+ 
+  // =============================
+  // NEW
+  // =============================
   const handleNew = () => {
     setFormData(initialFormData);
     setSelectedIndex(null);
     setShowModal(true);
   };
-
+ 
+  // =============================
+  // SAVE (INSERT / UPDATE)
+  // =============================
   const handleSave = async () => {
-    if (!formData.userGroupCode || !formData.userGroupName) {
+    if (!formData.code || !formData.name) {
       alert("Please fill all fields");
       return;
     }
-
+ 
     try {
-      await axios.post(`${BASE_URL}/usergroup`, formData);
+      await axios.post(`${BASE_URL}/api/usergroup`, formData); // ✅ PORT FIX
       alert("Saved");
-      fetchGroups();
+      fetchGroups(); // 🔥 refresh
       setShowModal(false);
+      setSelectedIndex(null);
     } catch (err) {
       console.log(err);
     }
   };
-
-  const handleDelete = () => {
+ 
+  // =============================
+  // DELETE 🔥 (API)
+  // =============================
+  const handleDelete = async () => {
     if (selectedIndex === null) {
       alert("Select a record");
       return;
     }
-
+ 
+    const selected = groups[selectedIndex];
+ 
     if (window.confirm("Delete this record?")) {
-      const updated = groups.filter((_, idx) => idx !== selectedIndex);
-      setGroups(updated);
-      setShowModal(false);
+      try {
+        await axios.delete(`${BASE_URL}/api/usergroup/${selected.code}`);
+        fetchGroups(); // 🔥 refresh
+        setShowModal(false);
+        setSelectedIndex(null);
+      } catch (err) {
+        console.log(err);
+      }
     }
   };
-
-  const handleClose = () => setShowModal(false);
-
+ 
+  const handleClose = () => {
+    setShowModal(false);
+    setSelectedIndex(null);
+  };
+ 
   return (
     <div id="usergroup-container" className="usergroup-container1">
-
-      <div id="full-page" className="full-page1">
-
+ 
+      <div id="full-page" className="usergroup-full-page1">
+ 
         {/* HEADER */}
-        <div id="top-bar1" className="top-bar1">
-          <h2 id="top-title1" className="top-title1">User Group</h2>
-
-          <button id="btn-new1" className="btn-new1" onClick={handleNew}>
+        <div id="top-bar1" className="usergroup-top-bar1">
+          <h2 id="top-title1" className="usergroup-top-title1">User Group</h2>
+ 
+          <button id="btn-new1" className="usergroup-btn-new1" onClick={handleNew}>
             New
           </button>
         </div>
-
+ 
         {/* TABLE */}
-        <table id="styled-table1" className="styled-table1">
+        <table id="styled-table1" className="usergroup-styled-table1">
           <thead>
             <tr>
               <th>ID</th>
@@ -126,7 +152,7 @@ export default function UserGroup() {
               <th>Modified</th>
             </tr>
           </thead>
-
+ 
           <tbody>
             {groups.length === 0 ? (
               <tr>
@@ -134,86 +160,63 @@ export default function UserGroup() {
               </tr>
             ) : (
               groups.map((grp, index) => (
-                <tr key={grp.userGroupId} onClick={() => handleSelect(index)}>
-                  <td>{grp.userGroupId}</td>
-                  <td>{grp.userGroupCode}</td>
-                  <td>{grp.userGroupName}</td>
-                  <td>{grp.isActive ? "Yes" : "No"}</td>
-                  <td>{grp.createddate || "-"}</td>
+                <tr key={grp.id} onClick={() => handleSelect(index)}>
+                  <td>{grp.id}</td>
+                  <td>{grp.code}</td>
+                  <td>{grp.name}</td>
+                  <td>{grp.active ? "Yes" : "No"}</td>
+                  <td>{grp.createdDate || "-"}</td>
                   <td>{grp.modifyDate || "-"}</td>
                 </tr>
               ))
             )}
           </tbody>
         </table>
-
+ 
       </div>
-
+ 
       {/* MODAL */}
       {showModal && (
-        <div id="form-overlay1" className="form-overlay1">
-          <div id="form-modal1" className="form-modal1">
-
-            <h2 id="form-title1" className="form-title1">User Group Setup</h2>
-
-            <div id="form-left1" className="form-left1">
-
+        <div id="form-overlay1" className="usergroup-form-overlay1">
+          <div id="form-modal1" className="usergroup-form-modal1">
+ 
+            <h2 id="form-title1" className="usergroup-form-title1">User Group Setup</h2>
+ 
+            <div id="form-left1" className="usergroup-form-left1">
+ 
               <label>
                 <span>ID</span>
-                <input
-                  className="form-left1"
-                  type="text"
-                  name="userGroupId"
-                  value={formData.userGroupId || ""}
-                  readOnly
-                />
+                <input type="text" name="id" value={formData.id || ""} readOnly />
               </label>
-
+ 
               <label>
                 <span>Code</span>
-                <input
-                  className="form-left1"
-                  type="text"
-                  name="userGroupCode"
-                  value={formData.userGroupCode}
-                  onChange={handleChange}
-                />
+                <input type="text" name="code" value={formData.code} onChange={handleChange} />
               </label>
-
+ 
               <label>
                 <span>Name</span>
-                <input
-                  className="form-left1"
-                  type="text"
-                  name="userGroupName"
-                  value={formData.userGroupName}
-                  onChange={handleChange}
-                />
+                <input type="text" name="name" value={formData.name} onChange={handleChange} />
               </label>
-
+ 
               <label>
                 <span>Active</span>
-                <input
-                  className="form-left1"
-                  type="checkbox"
-                  name="isActive"
-                  checked={formData.isActive}
-                  onChange={handleChange}
-                />
+                <input type="checkbox" name="active" checked={formData.active} onChange={handleChange} />
               </label>
-
+ 
             </div>
-
-            <div id="button-box1" className="button-box1">
-              <button id="save-btn1" className="save-btn1" onClick={handleSave}>Save</button>
-              <button id="delete-btn1" className="delete-btn1" onClick={handleDelete}>Delete</button>
-              <button id="cancel-btn1" className="cancel-btn1" onClick={handleClose}>Close</button>
+ 
+            <div id="button-box1" className="usergroup-button-box1">
+              <button id="save-btn1" className="usergroup-save-btn1" onClick={handleSave}>Save</button>
+              <button id="delete-btn1" className="usergroup-delete-btn1" onClick={handleDelete}>Delete</button>
+              <button id="cancel-btn1" className="usergroup-cancel-btn1" onClick={handleClose}>Close</button>
             </div>
-
+ 
           </div>
         </div>
       )}
-
+ 
     </div>
   );
 }
+ 

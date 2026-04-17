@@ -44,37 +44,36 @@ const loadModifiers = async () => {
  const handleSave = async () => {
   try {
 
-     const cleanData = {
+    const cleanData = {
       ...modifier,
-      ModifierName: modifier.ModifierName.trim().replace(/^'+|'+$/g, "")
+      ModifierName: modifier.ModifierName.trim(),
+
+      ConflictId:
+        modifier.ConflictId && modifier.ConflictId.length === 36
+          ? modifier.ConflictId
+          : null,
+
+      isActive:
+        modifier.isActive === true || modifier.isActive === "true",
     };
 
     console.log("Sending:", cleanData);
-    if (modifier.ModifierId) {
 
-      await axios.put(`${API}/modifiermaster/${modifier.ModifierId}`, modifier);
+    if (modifier.ModifierId) {
+      await axios.put(
+        `${API}/modifiermaster/${modifier.ModifierId}`,
+        cleanData   
+      );
     } else {
-      await axios.post(`${API}/modifiermaster`, modifier);
+      await axios.post(`${API}/modifiermaster`, cleanData);
     }
 
     loadModifiers();
-
     setShowModal(false);
     setEditIndex(null);
 
-    setModifier({
-      ModifierId: "", 
-      ModifierCode: "",
-      ModifierName: "",
-      ConflictId: "",
-      isActive: true,
-      SortCode: "",
-      isPriceAffect: false,
-      isOpenModifier: false,
-    });
-
   } catch (err) {
-    console.error("SAVE ERROR", err);
+    console.log("SERVER ERROR:", err.response?.data);
   }
 };
 
@@ -108,11 +107,37 @@ console.log("ITEM:", item); // debug
   return (
     <div className="modifier-container">
 
-        <h1 className="modifier-title">Modifier</h1>
+       <div className="modifier-header">
+  <h1 className="modifier-title">Modifier</h1>
 
-      <button className="new-btn" onClick={() => setShowModal(true)}>
-        New
-      </button>
+  <button
+  className="modifier-new-btn"
+  onClick={async () => {
+  try {
+    const res = await axios.get(`${API}/modifiermaster/nextcode`);
+
+    setModifier({
+      ModifierId: "",
+      ModifierCode: res.data.code, // 🔥 AUTO VALUE
+      ModifierName: "",
+      ConflictId: "",
+      isActive: true,
+      SortCode: "",
+      isPriceAffect: false,
+      isOpenModifier: false,
+    });
+
+    setEditIndex(null);
+    setShowModal(true);
+
+  } catch (err) {
+    console.log("ERROR:", err);
+  }
+}}
+  >
+  New
+  </button>
+ </div>
 
       <table className="modifier-table">
 
@@ -120,7 +145,6 @@ console.log("ITEM:", item); // debug
           <tr>
             <th>ModifierCode</th>
             <th>ModifierName</th>
-            <th>ConflictId</th>
             <th>isActive</th>
             <th>SortCode</th>
             <th>isPriceAffect</th>
@@ -145,7 +169,6 @@ console.log("ITEM:", item); // debug
 
                   <td onClick={() => handleEdit(index)}>{item.ModifierCode}</td>
                   <td onClick={() => handleEdit(index)}>{item.ModifierName}</td>
-                  <td onClick={() => handleEdit(index)}>{item.ConflictId}</td>
                   <td onClick={() => handleEdit(index)}>{item.isActive ? "Active" : "Inactive"}</td>
                   <td onClick={() => handleEdit(index)}>{item.SortCode}</td>
                   <td onClick={() => handleEdit(index)}>{item.isPriceAffect ? "Yes" : "No"}</td>
@@ -175,24 +198,24 @@ console.log("ITEM:", item); // debug
 
       {showModal && (
 
-        <div className="modal-overlay-md">
+        <div className="modifier-modal-overlay-md">
 
-          <div className="modal-box-md">
+          <div className="modifier-modal-box-md">
 
             <h2>{editIndex !== null ? "Edit Modifier" : "Add Modifier"}</h2>
 
             <div className="modifier-form">
 
-              <div className="form-row">
+              <div className="modifier-form-row">
                 <label>Modifier Code</label>
                 <input
                   name="ModifierCode"
                   value={modifier.ModifierCode}
-                  onChange={handleChange}
+                  disabled
                 />
               </div>
 
-              <div className="form-row">
+              <div className="modifier-form-row">
                 <label>Modifier Name</label>
                 <input
                   name="ModifierName"
@@ -201,16 +224,25 @@ console.log("ITEM:", item); // debug
                 />
               </div>
 
-              <div className="form-row">
+              <div className="modifier-form-row">
                 <label>Conflict Id</label>
-                <input
-                  name="ConflictId"
-                  value={modifier.ConflictId}
-                  onChange={handleChange}
-                />
+               <select
+                name="ConflictId"
+                value={modifier.ConflictId || ""}
+                onChange={handleChange}
+              >
+                <option value="">None</option>
+
+                {modifierList.map((m) => (
+                  <option key={m.ModifierId} value={m.ModifierId}>
+                    {m.ModifierName}
+                  </option>
+                ))}
+
+              </select>
               </div>
 
-              <div className="form-row">
+              <div className="modifier-form-row">
                 <label>Active</label>
                <select
                 name="isActive"
@@ -221,13 +253,13 @@ console.log("ITEM:", item); // debug
       isActive: e.target.value === "true",
     })
   }
->
+  >
                   <option value={true}>Active</option>
                   <option value={false}>Inactive</option>
                 </select>
               </div>
 
-              <div className="form-row">
+              <div className="modifier-form-row">
                 <label>Sort Code</label>
                 <input
                   type="number"
@@ -239,26 +271,62 @@ console.log("ITEM:", item); // debug
 
 
 {/* Price Affect */}
+<div className="modifier-form-row">
+  <label>Price Affect</label>
 
-<div className="checkbox-row">
+  <div className="price-section">
+    
+    {/* Price Affect Checkbox */}
+    <label className="checkbox-inline">
+      <input
+        type="checkbox"
+        name="isPriceAffect"
+        checked={modifier.isPriceAffect}
+        onChange={handleChange}
+      />
+      <span className="yesno">[Yes/No]</span>
+    </label>
 
-<span className="label">Price Affect</span>
+    {/* SHOW ONLY IF CHECKED */}
+    {modifier.isPriceAffect && (
+      <div className="price-box">
+        
+        {/* Change Price */}
+        <label className="checkbox-inline">
+          <input
+            type="checkbox"
+            name="isDishPrice"
+            checked={modifier.isDishPrice || false}
+            onChange={handleChange}
+          />
+          Change Price
+        </label>
 
-<input
-  type="checkbox"
-  name="isPriceAffect"
-  checked={modifier.isPriceAffect}
-  onChange={handleChange}
-/>
-
+        {/* Cost */}
+        <input
+          type="number"
+          placeholder="Cost"
+          value={modifier.DishCost || ""}
+          onChange={(e) =>
+            setModifier({
+              ...modifier,
+              DishCost: e.target.value,
+            })
+          }
+          disabled={!modifier.isDishPrice}
+          className="amount-input"
+        />
+      </div>
+    )}
+  </div>
 </div>
 
 
 {/* Open Modifier */}
 
-<div className="checkbox-row">
+<div className="modifier-checkbox-row">
 
-<span className="label">Open Modifier</span>
+<span className="modifier-label">Open Modifier</span>
 
 <input
 type="checkbox"
@@ -270,14 +338,14 @@ onChange={handleChange}
 </div>
 
 
-              <div className="modal-buttons-md">
+              <div className="modifier-modal-buttons-md">
 
-                <button className="save-btn-md" onClick={handleSave}>
+                <button className="modifier-save-btn-md" onClick={handleSave}>
                   {editIndex !== null ? "Update" : "Save"}
                 </button>
 
                 <button
-                  className="cancel-btn-md"
+                  className="modifier-cancel-btn-md"
                   onClick={() => setShowModal(false)}
                 >
                   Cancel

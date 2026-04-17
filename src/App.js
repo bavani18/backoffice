@@ -1,9 +1,6 @@
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { useState } from "react";
 
-
-
-
 import Login from "./pages/Login";
 import Home from "./pages/Home";
 import Contact from "./pages/Contact";
@@ -18,7 +15,29 @@ import SltReport from "./pages/SltReport";
 import Member from "./pages/Member";
 import UserGroup from "./pages/usergroup";
 import UserMaster from "./pages/usermaster";
+import Permission from "./pages/Permission";
+import RewardPoints from "./pages/RewardPoints";
 import Sidebar from "./components/Sidebar";
+import VendorMaster from "./pages/VendorMaster";
+import Paymode from "./pages/Paymode";
+import PickList from "./pages/PickList";
+import Terminal from "./pages/Terminal";
+import Discount from "./pages/Discount";
+import EmailSettings from "./pages/EmailSettings";
+import FireCourseForm from "./pages/FireCourseForm";
+import PriceList from "./pages/PriceList";
+import PrinterModal from "./pages/PrinterModal";
+import Barcode from "./pages/Barcode";
+import CancelRemarkModal from "./pages/CancelRemarkModal";
+import HappyHours from "./pages/HappyHours";
+import POSPermission from "./pages/POSPermission";
+import StockPage from "./pages/StockPage";
+import StockEntryPage from "./pages/StockEntryPage";
+
+
+// import { LoaderProvider } from "./context/LoaderContext";
+
+// import GlobalLoader from "./components/GlobalLoader";
 
 function Layout() {
   const [open, setOpen] = useState(true);
@@ -53,7 +72,25 @@ function Layout() {
           <Route path="/SltReport" element={<SltReport />} />
           <Route path="/Member" element={<Member />} />
           <Route path="/usergroup" element={<UserGroup />} />
-            <Route path="/usermaster" element={<UserMaster />} />
+          <Route path="/usermaster" element={<UserMaster />} />
+          <Route path="/Permission" element={<Permission />} />
+          <Route path="/RewardPoints" element={<RewardPoints />} />
+          <Route path="/Vendormaster" element={<VendorMaster />} />
+          <Route path="/Paymode" element={<Paymode />} />
+          <Route path="/PickList" element={<PickList />} />
+          <Route path="/Terminal" element={<Terminal />} />
+          <Route path="/Discount" element={<Discount />} />
+          <Route path="/EmailSettings" element={<EmailSettings />} />
+          <Route path="/FireCourseForm" element={<FireCourseForm />} />
+          <Route path="/PriceList" element={<PriceList />} />
+          <Route path="/PrinterModal" element={<PrinterModal show={true} />} />
+          <Route path="/Barcode" element={<Barcode show={true} />} />
+          <Route path="/CancelRemarkModal" element={<CancelRemarkModal show={true} />} />
+          <Route path="/HappyHours" element={<HappyHours show={true} />} />
+          <Route path="/POSPermission" element={<POSPermission show={true} />} />
+          <Route path="/StockPage" element={<StockPage show={true} />} />
+          <Route path="/StockEntryPage" element={<StockEntryPage />} />
+          <Route path="/StockEntryPage/:tranNo" element={<StockEntryPage />} />
         </Routes>
       </div>
     </>
@@ -62,9 +99,15 @@ function Layout() {
 
 function App() {
   return (
-    <BrowserRouter>
-      <Layout />
-    </BrowserRouter>
+    // <LoaderProvider>   {/* 🔥 ADD THIS */}
+      <BrowserRouter>
+
+        {/* <GlobalLoader />   🔥 ADD THIS */}
+
+        <Layout />
+
+      </BrowserRouter>
+    // </LoaderProvider>
   );
 }
 

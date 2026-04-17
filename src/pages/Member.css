@@ -1,38 +1,436 @@
-.home {
-  height: 100vh;   /* FULL SCREEN ALWAYS */
-  width: 100%;
-
-  display: flex;
-  justify-content: center;
-  align-items: center;
-
-  
-  /* background-size: cover; */
-  /* background-position: center; */
-  background-repeat: no-repeat;
+/* ================= MAIN ================= */
+body {
+  margin: 0;
+  background: #f4f6f9;
+  font-family: 'Segoe UI', sans-serif;
 }
 
-
-/* background-image: url("/bg.png"); */
-
-.home {
-  width: 100%;
-  height: 100vh; /* FULL SCREEN */
-  background-size: cover; /* cover full screen */
-  background-position: center; /* center image */
-  background-repeat: no-repeat;
-
-  display: flex;
-  justify-content: center;
-  align-items: center;
+.mem-page-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-top: 4px;
+  margin-bottom: 10px;
+}
+.mem-main-container {
+  padding: 20px 30px;
 }
 
-/* Card style */
-.home-card {
-  background: rgba(63, 63, 63, 0.6);
-  padding: 30px;
-  border-radius: 12px;
+.mem-meal-header {
+  display: flex;
+  justify-content: flex-end;   /* 👈 left side fix */
+  align-items: center;
+  margin-bottom: 10px;
+  margin-left: 80%;
+}
+
+.mem-meal-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.mem-meal-table input {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+}
+
+.mem-btn-add {
+  background-color: #4CAF50;
   color: white;
-  /* text-align: center; */
+  border: none;
+  padding: 6px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* DELETE BUTTON */
+.mem-btn-delete {
+  background-color: #f44336;
+  color: white;
+  border: none;
+  padding: 6px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* SAVE BUTTON */
+.mem-btn-save {
+  background-color: #2196F3;
+  color: white;
+  border: none;
+  padding: 6px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* HOVER EFFECT */
+.mem-btn-add:hover {
+  background-color: #3e8e41;
+}
+
+.mem-btn-delete:hover {
+  background-color: #d32f2f;
+}
+
+.mem-btn-save:hover {
+  background-color: #1976d2;
+}
+
+/* ================= FORM ================= */
+.mem-form-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 8px 6px; /* 🔥 compact spacing */
+}
+
+.mem-form-table td {
+  border: none;
+  padding: 2px 0;
+  vertical-align: middle;
+}
+
+/* LABEL */
+.mem-form-table td:nth-child(1),
+.mem-form-table td:nth-child(3) {
+  font-size: 13px;
+  font-weight: 600;
+  color: #444;
+  width: 180px;
+}
+
+/* INPUT */
+.mem-form-table input,
+.mem-form-table select {
+  width: 300px;
+  padding: 6px 8px;   /* 🔥 reduced height */
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 13px;
+  background: #fff;
+  transition: 0.2s;
+  height: 34px;
+  box-sizing: border-box;
+}
+
+/* INPUT FOCUS */
+.mem-form-table input:focus,
+.mem-form-table select:focus {
+  border: 1px solid #4a90e2;
+  box-shadow: 0 0 4px rgba(74,144,226,0.2);
+  outline: none;
+}
+
+/* CHECKBOX */
+.mem-form-table input[type="checkbox"] {
+  width: auto;
+  margin-right: 6px;
+  transform: scale(1);
+}
+
+.mem-header-bar {
+  display: flex;
+  align-items: center;        /* vertical center */
+  justify-content: space-between;
+  width: 100%;
+}
+
+.mem-header-bar button {
+  margin-left: auto;
+}
+
+/* ================= BUTTON ================= */
+.mem-save-btn {
+  margin-top: 15px;
+  margin-left: 95%;
+  padding: 10px 25px;
+  background: linear-gradient(135deg, #ff6a88, #ff99ac);
+  border: none;
+  border-radius: 6px;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mem-save-btn:hover {
+  opacity: 0.9;
+}
+
+/* ================= TABS ================= */
+.mem-tabs {
+  margin-top: 20px;
+  background: #fff;
+  border-radius: 8px;
+  padding: 8px;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+}
+
+/* TAB HEADER */
+.mem-tab-header {
+  display: flex;
+  border-bottom: 2px solid #eee;
+}
+
+.mem-tab-header button {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  background: none;
+  font-weight: 600;
+  color: #777;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+/* ACTIVE TAB */
+.mem-tab-header button.active {
+  color: #4a90e2;
+  border-bottom: 3px solid #4a90e2;
+}
+
+/* ================= GRID ================= */
+.mem-meal-table {
+  width: 100%;
+  margin-top: 10px;
+  border-collapse: collapse;
+}
+
+/* HEADER */
+.mem-meal-table th {
+ background: linear-gradient(200deg, #1e1e2f, #043449);
+  padding: 8px;
+  font-size: 12px;
+  text-align: center;
+  border-bottom: 1px solid #ddd;
+}
+
+/* ROW */
+.mem-meal-table td {
+  padding: 8px;
+  font-size: 12px;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+/* HOVER */
+.mem-meal-table tr:hover {
+  background: #f9fbff;
+}
+
+/* SELECTED */
+.mem-selected-row {
+  background: #e3f2fd !important;
+}
+
+/* ================= BUTTON GROUP ================= */
+.mem-meal-buttons {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+}
+
+/* COMMON BUTTON */
+.mem-meal-buttons button {
+  padding: 7px 16px;
+  border-radius: 6px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+/* ADD */
+.mem-meal-buttons button:nth-child(1) {
+  background: #4caf50;
+  color: white;
+}
+
+/* DELETE */
+.mem-meal-buttons button:nth-child(2) {
+  background: #f44336;
+  color: white;
+}
+
+/* SAVE */
+.mem-meal-buttons button:nth-child(3) {
+  background: #2196f3;
+  color: white;
+}
+
+/* BUTTON HOVER */
+.mem-meal-buttons button:hover {
+  opacity: 0.9;
+}
+
+/* OUTER BOX */
+.mem-value-card-container {
+  width: 900px;              /* 🔥 fixed width */
+  /* margin: 20px auto; */
+  padding: 20px 10px;
+  /* border: 1px solid #aaa; */
+  /* background: #f5f5f5; */
+}
+
+/* 2 COLUMN */
+.mem-value-card-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 60px;
+}
+
+/* ROW */
+.mem-form-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+/* LABEL */
+.mem-form-row label {
+  width: 140px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* INPUT */
+.mem-form-row input {
+   flex: 1;  
+  width: 10px;          /* 🔥 fixed input size */
+  padding: 6px;
+  /* border: 1px solid #666; */
+  /* background: #dbe5f1; */
+}
+
+/* AMOUNT FIELD */
+.mem-amount {
+  text-align: right;
+  background: #fff;
+}
+
+/* BLUE FIELD */
+/* .blue {
+  background: #b8cce4;
+} */
+
+/* CARD NUMBER BUTTON */
+.mem-input-with-btn {
+  display: flex;
+}
+
+.mem-input-with-btn input {
+  width: 140px;
+}
+
+.mem-input-with-btn button {
+  width: 35px;
+  margin-left: 5px;
+}
+
+/* DATE */
+.mem-date-group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.mem-date-group input {
+  width: 50px;
+  text-align: center;
+}
+
+/* SEPARATOR LINE */
+.mem-value-card-container::after {
+  content: "";
+  display: block;
+  margin-top: 15px;
+}
+
+/* BOX CONTAINER */
+.mem-other-box {
+  width: 900px;
+  margin: 20px auto;
+  padding: 30px;
+  /* border: 1px solid #999; */
+  /* background: #f2f2f2; */
+}
+
+/* GRID */
+.mem-other-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+}
+
+/* LEFT SIDE */
+.mem-other-left {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+/* FORM ROW */
+/* .mem-form-row {
+  display: flex;
+  align-items: center;
+} */
+
+/* LABEL */
+.mem-form-row label {
+  width: 140px;
+}
+
+/* INPUT */
+.mem-form-row input {
+  width: 180px;
+  padding: 5px;
+  border: 1px solid #666;
+  background: #fff;
+}
+
+/* SMALL BUTTON */
+.mem-dot-btn {
+  width: 35px;
+  margin-left: 5px;
+}
+
+/* AMOUNT */
+.mem-amount {
+  text-align: right;
+}
+
+/* RIGHT SIDE */
+.mem-other-right {
+  display: flex;
+  justify-content: space-around;
+}
+
+/* BIG UPLOAD BUTTON */
+.mem-upload-big {
+  width: 140px;
+  height: 80px;
+  background: #ddd;
+  border: 1px solid #999;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+
+.mem-checkbox-group {
+  display: flex;
+  align-items: center;
+  gap: 40px;
+}
+
+.mem-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+}
+
+.mem-checkbox input {
+  transform: scale(1.1);
+  margin: 0;
 }
 

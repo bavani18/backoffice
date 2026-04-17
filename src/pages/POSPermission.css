@@ -1,0 +1,123 @@
+body {
+  margin: 0;
+}
+ 
+.pos-page {
+  padding: 0px 30px;
+}
+ 
+.pos-title {
+  font-size: 22px;
+  margin-top: 0;
+  margin-bottom: 8px;
+}
+ 
+.pos-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+ 
+.lov-box {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+}
+ 
+.lov-label {
+  font-size: 14px;
+  font-weight: 500;
+}
+ 
+.lov-box input {
+  padding: 8px 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px 0 0 6px;
+  width: 200px;
+}
+ 
+.lov-search {
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-left: none;
+  background: #6b4b7c;
+  color: #fff;
+  border-radius: 0 6px 6px 0;
+  cursor: pointer;
+}
+ 
+.lov-search:hover {
+  background: #5a3e68;
+}
+ 
+.btn-load {
+  padding: 8px 14px;
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+ 
+.btn-save {
+  padding: 8px 14px;
+  background: #16a34a;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+ 
+/* 🔥 TABLE FIXED */
+.pos-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid #cbd5e1;
+}
+ 
+.pos-table thead th {
+  background: #6b4b7c;
+  color: #fff;
+  padding: 10px;
+  border: 1px solid #5a3e68;
+}
+ 
+.pos-table tbody td {
+  padding: 10px;
+  border: 1px solid #cbd5e1;
+  text-align: center;
+}
+ 
+.pos-table tbody tr:hover {
+  background: #f1f5ff;
+}
+ 
+.lov-box select {
+  padding: 8px 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  width: 220px;
+}
+ 
+.lov-container {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+ 
+.lov-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+ 
+.lov-row select {
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  min-width: 200px;
+}
+ 

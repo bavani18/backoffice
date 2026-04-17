@@ -3,8 +3,9 @@ import axios from "axios";
 import "./Dish.css";
 
 import { BASE_URL } from "../config/api";
- 
-function Dish() {
+
+
+ function Dish() {
  
   const emptyDish = {
     DishId: "",
@@ -34,12 +35,12 @@ function Dish() {
     isServiceCharge: false,
     isFavourite: false,
     KitchenType: "General",
-SubkitchenType: "",
+    SubkitchenType: "",
   };
  
   const fetchDish = async () => {
   try{
-  
+  setLoading(true);  // 🔥 START LOADER
   const res = await axios.get(`${BASE_URL}/dish`);
  
   setEntries(res.data);
@@ -48,11 +49,13 @@ SubkitchenType: "",
   
   console.error("DishGroup load error:",err);
   
+  }finally {
+    setLoading(false);  // 🔥 STOP LOADER
   }
   };
 
   // ✅ PAGE LOAD
-useEffect(()=>{
+ useEffect(()=>{
   fetchDish();
 
   axios.get(`${BASE_URL}/modifier`)
@@ -68,9 +71,9 @@ useEffect(()=>{
   })
   .catch(err => console.error("DishGroup error:", err));
 
-},[]);
+ },[]);
 
-const [entries,setEntries] = useState([]);
+  const [entries,setEntries] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [activeTab, setActiveTab] = useState("customize");
   const [dish, setDish] = useState(emptyDish);
@@ -81,19 +84,27 @@ const [entries,setEntries] = useState([]);
   const [textColor, setTextColor] = useState("#fff");
   const [displayName, setDisplayName] = useState(true);
   const [existingImage, setExistingImage] = useState(null);
-   const [dishGroups, setDishGroups] = useState([]);
+  const [dishGroups, setDishGroups] = useState([]);
 
-const [dishmodifier, setdishModifiers] = useState([]);
-const [dishkitchens, setdishKitchens] = useState([]);
+  const [dishmodifier, setdishModifiers] = useState([]);
+  const [dishkitchens, setdishKitchens] = useState([]);
 
-const [selecteddishModifiers, setSelecteddishModifiers] = useState([]);
-const [selecteddishKitchens, setSelecteddishKitchens] = useState([]);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const [selecteddishModifiers, setSelecteddishModifiers] = useState([]);
+  const [selecteddishKitchens, setSelecteddishKitchens] = useState([]);
  
   const colorPickerRef = useRef(null);
   const textColorPickerRef = useRef(null);
- 
+
+  const [filters, setFilters] = useState({});
+  const [activeFilter, setActiveFilter] = useState(null);
+
+  const [loading, setLoading] = useState(false);
+
   const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
+  const { name, value, type, checked } = e.target;
  
     setDish({
       ...dish,
@@ -102,7 +113,7 @@ const [selecteddishKitchens, setSelecteddishKitchens] = useState([]);
   };
  
   const handleImageUpload = (e) => {
-    const file = e.target.files[0];
+  const file = e.target.files[0];
  
     if (file) {
       const url = URL.createObjectURL(file);
@@ -120,8 +131,10 @@ const [selecteddishKitchens, setSelecteddishKitchens] = useState([]);
  
   const handleSave = async () => {
   try {
-    
+     setLoading(true);
       console.log("SAVE CLICKED");
+
+      console.log("KITCHEN SEND 👉", selecteddishKitchens);
 
     // 🔥 create FormData
     const formData = new FormData();
@@ -139,7 +152,26 @@ const [selecteddishKitchens, setSelecteddishKitchens] = useState([]);
     formData.set("QuantityOnHand", Number(dish.QuantityOnHand) || 0);
     formData.set("SordCode", Number(dish.SordCode) || 0);
     formData.append("KitchenType", "General");       
-    formData.append("SubkitchenType", "");          
+    formData.append("SubkitchenType", ""); 
+    
+     const selectedKitchens = selecteddishKitchens.map(code => {
+  const k = dishkitchens.find(x => Number(x.KitchenTypeCode) === code);
+
+  return {
+    KitchenTypeCode: code,
+    KitchenTypeName: k?.KitchenTypeName || ""
+  };
+});
+
+formData.set(
+  "KitchenTypes",
+  JSON.stringify(selectedKitchens)
+);
+
+      formData.append(
+      "Modifiers",
+      JSON.stringify(selecteddishModifiers || [])
+    );
 
     // 🔥 image file
     if (categoryImage) {
@@ -173,6 +205,8 @@ const [selecteddishKitchens, setSelecteddishKitchens] = useState([]);
 
   } catch (err) {
     console.log("SAVE ERROR ❌", err.response?.data || err.message);
+  }finally {
+    setLoading(false);  // 🔥 ADD THIS
   }
 };
  
@@ -183,92 +217,397 @@ const [selecteddishKitchens, setSelecteddishKitchens] = useState([]);
  
   const openNewDish = () => {
     setDish(emptyDish);
+    setSelecteddishKitchens([]);   // 🔥 ADD THIS
+    setSelecteddishModifiers([]);  // 🔥 ADD THIS
     setEditIndex(null);
     setShowModal(true);
   };
 
   
-const getGroupName = (id) => {
-  const group = dishGroups.find(g => g.DishGroupId === id);
-  return group ? group.DishGroupName : id; 
-};
+      const getGroupName = (id) => {
+      const group = dishGroups.find(g => g.DishGroupId === id);
+       return group ? group.DishGroupName : id; 
+    };
  
-const handleEdit = (index) => {
-   const row = entries[index];
-  const data = entries[index];
-  
+const handleEdit = async (data) => {
 
   setDish(data);
-  setEditIndex(index);
 
-  // 🔥 IMPORTANT
-  setExistingImage(data.ImageData || null);
-  setCategoryImage(null); // reset new upload
+  const kRes = await axios.get(`${BASE_URL}/dishkitchen/${data.DishId}`);
+  const kIds = kRes.data.map(x => Number(x.KitchenTypeCode));
 
-    // 🔥 ADD THIS (MODIFIER GET)
-  axios.get(`${BASE_URL}/dishmodifier/${data.DishId}`)
-    .then(res => {
-      const ids = res.data.map(x => x.ModifierId);
-      setSelecteddishModifiers(ids);
-    });
+  const mRes = await axios.get(`${BASE_URL}/dishmodifier/${data.DishId}`);
+  const mIds = mRes.data.map(x => String(x.ModifierId));
 
-  // 🔥 ADD THIS (KITCHEN GET)
-  axios.get(`${BASE_URL}/dishkitchen/${data.DishId}`)
-    .then(res => {
-      const kitchens = res.data.map(x => ({
-        KitchenTypeCode: x.KitchenTypeCode
-      }));
-      setSelecteddishKitchens(kitchens);
-    });
-
+  setSelecteddishKitchens(kIds);
+  setSelecteddishModifiers(mIds);
 
   setShowModal(true);
 };
+
+const filteredData = entries.filter((row) => {
+  return Object.keys(filters).every((key) => {
+    if (!filters[key]) return true;
+
+    let value = row[key];
+
+    // ✅ GROUP NAME FIX
+if (key === "DishGroupId") {
+  value = getGroupName(row.DishGroupId);
+}
+
+    // ✅ NULL FIX
+    if (value === null || value === undefined) {
+      value = "";
+    }
+
+    // ✅ BOOLEAN → YES/NO FIX (ALL FIELDS)
+    if (typeof value === "boolean") {
+      value = value ? "yes" : "no";
+    }
+
+    return String(value)
+      .toLowerCase()
+      .includes(filters[key].toLowerCase());
+  });
+});
+
+const totalRows = filteredData.length;
+
+      const totalPages =
+        rowsPerPage === "ALL"
+          ? 1
+          : Math.ceil(totalRows / rowsPerPage);
+
+      const startIndex =
+        rowsPerPage === "ALL"
+          ? 0
+          : (currentPage - 1) * rowsPerPage;
+
+      const endIndex =
+        rowsPerPage === "ALL"
+          ? totalRows
+          : startIndex + rowsPerPage;
+
+      const paginatedData =
+        rowsPerPage === "ALL"
+          ? filteredData
+          : filteredData.slice(startIndex, endIndex);
+
+          const showingFrom = totalRows === 0 ? 0 : startIndex + 1;
+
+  const showingTo =
+  rowsPerPage === "ALL"
+    ? totalRows
+    : Math.min(startIndex + rowsPerPage, totalRows);
  
   return (
     <div className="dish-page1">
- 
-      <h1>Dish Master</h1>
- 
-      <button className="dish-new-btn1" onClick={openNewDish}>
-        New
-      </button>
+
+    <div className="dish-header">
+  <h1>Dish Master</h1>
+
+  <div className="dish-header-right">
+    
+    <button className="dish-new-btn1" onClick={openNewDish}>
+      New
+    </button>
+
+    <select
+      value={rowsPerPage}
+      onChange={(e) => {
+        const value = e.target.value === "ALL" ? "ALL" : Number(e.target.value);
+        setRowsPerPage(value);
+        setCurrentPage(1);
+      }}
+      className="rows-dropdown"
+    >
+      <option value={10}>10</option>
+      <option value={20}>20</option>
+      <option value={30}>30</option>
+      <option value={50}>50</option>
+      <option value="ALL">All</option>
+    </select>
+
+  </div>
+</div>
+      
  
       <div className="dish-report-section1">
         <table className="dish-report-table1">
  
           <thead>
             <tr>
-              <th>Dish Code</th>
-              <th>Name</th>
-              <th>Short Name</th>
-              <th>Description</th>
-              <th>Group</th>
-              <th>Price</th>
-              <th>Sort Code</th>
-              <th>Unit Cost</th>
-              <th>Qty</th>
-              <th>Active</th>
-              <th>Kitchen</th>
-              <th>Discount</th>
-              <th>Tax</th>
-              <th>Stock</th>
-              <th>FOC</th>
-              <th>Service</th>
-              <th>Favourite</th>
-            </tr>
+            <th onClick={() => setActiveFilter("DishCode")}>
+              Dish Code
+              
+               {activeFilter === "DishCode" && (
+                <input
+                  onClick={(e) => e.stopPropagation()}
+                  type="text"
+                  value={filters.DishCode || ""}
+                  onChange={(e) =>
+                    setFilters({ ...filters, DishCode: e.target.value })
+                  }
+                />
+              )}
+            </th>
+             <th onClick={() => setActiveFilter("Name")}>
+              Name
+              
+               {activeFilter === "Name" && (
+                <input
+                  onClick={(e) => e.stopPropagation()}
+                  type="text"
+                  value={filters.Name || ""}
+                  onChange={(e) =>
+                    setFilters({ ...filters, Name: e.target.value })
+                  }
+                />
+              )}
+            </th>
+               <th onClick={() => setActiveFilter("ShortName")}>
+              Short Name
+              
+               {activeFilter === "ShortName" && (
+                <input
+                  onClick={(e) => e.stopPropagation()}
+                  type="text"
+                  value={filters.ShortName || ""}
+                  onChange={(e) =>
+                    setFilters({ ...filters, ShortName: e.target.value })
+                  }
+                />
+              )}
+            </th>
+            {/* Description */}
+            <th onClick={() => setActiveFilter("Description")}>
+              Description
+              {activeFilter === "Description" && (
+                <input
+                  onClick={(e) => e.stopPropagation()}
+                  value={filters.Description || ""}
+                  onChange={(e) =>
+                    setFilters({ ...filters, Description: e.target.value })
+                  }
+                />
+              )}
+            </th>
+
+            {/* Group */}
+            <th onClick={() => setActiveFilter("DishGroupId")}>
+              Group
+              {activeFilter === "DishGroupId" && (
+                <input
+                  onClick={(e) => e.stopPropagation()}
+                  value={filters.DishGroupId || ""}
+                  onChange={(e) =>
+                    setFilters({ ...filters, DishGroupId: e.target.value })
+                  }
+                />
+              )}
+            </th>
+
+            {/* Price */}
+            <th onClick={() => setActiveFilter("CurrentCost")}>
+              Price
+              {activeFilter === "CurrentCost" && (
+                <input
+                  onClick={(e) => e.stopPropagation()}
+                  value={filters.CurrentCost || ""}
+                  onChange={(e) =>
+                    setFilters({ ...filters, CurrentCost: e.target.value })
+                  }
+                />
+              )}
+            </th>
+
+            {/* Sort Code */}
+            <th onClick={() => setActiveFilter("SordCode")}>
+              Sort Code
+              {activeFilter === "SordCode" && (
+                <input
+                  onClick={(e) => e.stopPropagation()}
+                  value={filters.SordCode || ""}
+                  onChange={(e) =>
+                    setFilters({ ...filters, SordCode: e.target.value })
+                  }
+                />
+              )}
+            </th>
+
+            {/* Unit Cost */}
+            <th onClick={() => setActiveFilter("UnitCost")}>
+              Unit Cost
+              {activeFilter === "UnitCost" && (
+                <input
+                  onClick={(e) => e.stopPropagation()}
+                  value={filters.UnitCost || ""}
+                  onChange={(e) =>
+                    setFilters({ ...filters, UnitCost: e.target.value })
+                  }
+                />
+              )}
+            </th>
+
+            {/* Qty */}
+            <th onClick={() => setActiveFilter("QuantityOnHand")}>
+              Qty
+              {activeFilter === "QuantityOnHand" && (
+                <input
+                  onClick={(e) => e.stopPropagation()}
+                  value={filters.QuantityOnHand || ""}
+                  onChange={(e) =>
+                    setFilters({ ...filters, QuantityOnHand: e.target.value })
+                  }
+                />
+              )}
+            </th>
+
+            {/* Active */}
+            <th onClick={() => setActiveFilter("IsActive")}>
+              Active
+              {activeFilter === "IsActive" && (
+                <input
+                  placeholder="yes / no"
+                  onClick={(e) => e.stopPropagation()}
+                  value={filters.IsActive || ""}
+                  onChange={(e) =>
+                    setFilters({ ...filters, IsActive: e.target.value })
+                  }
+                />
+              )}
+            </th>
+
+            {/* Kitchen */}
+            <th onClick={() => setActiveFilter("iskitchenPrint")}>
+              Kitchen
+              {activeFilter === "iskitchenPrint" && (
+                <input
+                  placeholder="yes / no"
+                  onClick={(e) => e.stopPropagation()}
+                  value={filters.iskitchenPrint || ""}
+                  onChange={(e) =>
+                    setFilters({ ...filters, iskitchenPrint: e.target.value })
+                  }
+                />
+              )}
+            </th>
+
+            {/* Discount */}
+            <th onClick={() => setActiveFilter("isDiscountAllowed")}>
+              Discount
+              {activeFilter === "isDiscountAllowed" && (
+                <input
+                  placeholder="yes / no"
+                  onClick={(e) => e.stopPropagation()}
+                  value={filters.isDiscountAllowed || ""}
+                  onChange={(e) =>
+                    setFilters({ ...filters, isDiscountAllowed: e.target.value })
+                  }
+                />
+              )}
+            </th>
+
+            {/* Tax */}
+            <th onClick={() => setActiveFilter("IsTaxAllowed")}>
+              Tax
+              {activeFilter === "IsTaxAllowed" && (
+                <input
+                  placeholder="yes / no"
+                  onClick={(e) => e.stopPropagation()}
+                  value={filters.IsTaxAllowed || ""}
+                  onChange={(e) =>
+                    setFilters({ ...filters, IsTaxAllowed: e.target.value })
+                  }
+                />
+              )}
+            </th>
+
+            {/* Stock */}
+            <th onClick={() => setActiveFilter("IsStockDish")}>
+              Stock
+              {activeFilter === "IsStockDish" && (
+                <input
+                  placeholder="yes / no"
+                  onClick={(e) => e.stopPropagation()}
+                  value={filters.IsStockDish || ""}
+                  onChange={(e) =>
+                    setFilters({ ...filters, IsStockDish: e.target.value })
+                  }
+                />
+              )}
+            </th>
+
+            {/* FOC */}
+            <th onClick={() => setActiveFilter("isFOC")}>
+              FOC
+              {activeFilter === "isFOC" && (
+                <input
+                  placeholder="yes / no"
+                  onClick={(e) => e.stopPropagation()}
+                  value={filters.isFOC || ""}
+                  onChange={(e) =>
+                    setFilters({ ...filters, isFOC: e.target.value })
+                  }
+                />
+              )}
+            </th>
+
+            {/* Service */}
+            <th onClick={() => setActiveFilter("isServiceCharge")}>
+              Service
+              {activeFilter === "isServiceCharge" && (
+                <input
+                  placeholder="yes / no"
+                  onClick={(e) => e.stopPropagation()}
+                  value={filters.isServiceCharge || ""}
+                  onChange={(e) =>
+                    setFilters({ ...filters, isServiceCharge: e.target.value })
+                  }
+                />
+              )}
+            </th>
+
+            {/* Favourite */}
+            <th onClick={() => setActiveFilter("isFavourite")}>
+              Favourite
+              {activeFilter === "isFavourite" && (
+                <input
+                  placeholder="yes / no"
+                  onClick={(e) => e.stopPropagation()}
+                  value={filters.isFavourite || ""}
+                  onChange={(e) =>
+                    setFilters({ ...filters, isFavourite: e.target.value })
+                  }
+                />
+              )}
+            </th>
+
+          </tr>
           </thead>
  
           <tbody>
-            {entries.length === 0 ? (
+
+            {loading ? (
               <tr>
-                <td colSpan="17">No Data</td>
+                <td colSpan="17">
+                  <div className="spinner"></div>
+                </td>
               </tr>
+
+            ) : entries.length === 0 ? (
+
+              <tr>
+                <td colSpan="17">No Data Found</td>
+              </tr>
+
             ) : (
-          entries.map((d, i) => (
+
+              paginatedData.map((d, i) => (
                 <tr
                   key={i}
-                  onClick={() => handleEdit(i)}
+                  onClick={() => handleEdit(d)}
                   style={{ cursor: "pointer" }}
                 >
                   <td>{d.DishCode}</td>
@@ -541,40 +880,41 @@ const handleEdit = (index) => {
                 )}
 
                {/* MODIFIER TAB */}
-{activeTab === "modifier" && (
-  <div>
+        {activeTab === "modifier" && (
+          <div>
 
-    <input
-      type="text"
-      placeholder="Search Modifier..."
-      className="dish-modifier-search"
-    />
+            <input
+              type="text"
+              placeholder="Search Modifier..."
+              className="dish-modifier-search"
+            />
 
-    <div className="dish-modifier-container">
-      {dishmodifier.map((mod) => (
-        <label key={mod.ModifierId} className="dish-modifier-item">
+            <div className="dish-modifier-container">
+            {dishmodifier.map((mod) => (
+          <label key={mod.ModifierId} className="dish-modifier-item">
 
-          <input
+            <input
             type="checkbox"
-            checked={selecteddishModifiers.includes(mod.ModifierId)}
+            checked={selecteddishModifiers.includes(String(mod.ModifierId))}
             onChange={(e) => {
+              const value = String(mod.ModifierId);
+
               if (e.target.checked) {
-                setSelecteddishModifiers([
-                  ...selecteddishModifiers,
-                  mod.ModifierId
-                ]);
+                setSelecteddishModifiers((prev) =>
+                  prev.includes(value) ? prev : [...prev, value]
+                );
               } else {
-                setSelecteddishModifiers(
-                  selecteddishModifiers.filter(id => id !== mod.ModifierId)
+                setSelecteddishModifiers((prev) =>
+                  prev.filter((id) => id !== value)
                 );
               }
             }}
           />
 
-          {mod.ModifierName}
+            {mod.ModifierName}
 
-        </label>
-      ))}
+          </label>
+        ))}
     </div>
 
   </div>
@@ -584,34 +924,28 @@ const handleEdit = (index) => {
 {activeTab === "kitchen" && (
   <div className="dish-kitchen-container">
 
-    {dishkitchens.map((k) => (
-      <label key={k.KitchenTypeCode} className="dish-kitchen-item">
+   {dishkitchens.map((k) => (
+  <label key={k.KitchenTypeCode}>
+    <input
+      type="checkbox"
+      checked={selecteddishKitchens.includes(Number(k.KitchenTypeCode))}
+      onChange={(e) => {
+        const value = Number(k.KitchenTypeCode);
 
-        <input
-          type="checkbox"
-          checked={selecteddishKitchens.some(
-            x => x.KitchenTypeCode === k.KitchenTypeCode
-          )}
-          onChange={(e) => {
-            if (e.target.checked) {
-              setSelecteddishKitchens([
-                ...selecteddishKitchens,
-                k
-              ]);
-            } else {
-              setSelecteddishKitchens(
-                selecteddishKitchens.filter(
-                  x => x.KitchenTypeCode !== k.KitchenTypeCode
-                )
-              );
-            }
-          }}
-        />
-
-        {k.KitchenTypeName}
-
-      </label>
-    ))}
+        if (e.target.checked) {
+          setSelecteddishKitchens((prev) =>
+            prev.includes(value) ? prev : [...prev, value]
+          );
+        } else {
+          setSelecteddishKitchens((prev) =>
+            prev.filter((id) => id !== value)
+          );
+        }
+      }}
+    />
+    {k.KitchenTypeName}
+  </label>
+))}
 
   </div>
 )}
@@ -623,6 +957,30 @@ const handleEdit = (index) => {
  
         </div>
       )}
+
+      <div style={{ marginTop: "10px", display: "flex", gap: "10px", alignItems: "center" }}>
+
+  <button
+    onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+    disabled={currentPage === 1}
+  >
+    Prev
+  </button>
+
+  <span>
+    page {showingFrom}–{showingTo} of {totalRows}
+  </span>
+
+  <button
+    onClick={() =>
+      setCurrentPage((p) => Math.min(p + 1, totalPages))
+    }
+    disabled={currentPage === totalPages}
+  >
+    Next
+  </button>
+
+</div>
  
     </div>
   );

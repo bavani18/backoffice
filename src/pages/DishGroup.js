@@ -9,6 +9,11 @@ function DishGroup() {
 const [entries,setEntries] = useState([]);
 const [showModal,setShowModal] = useState(false);
 const [activeTab,setActiveTab] = useState("category");
+const [filters, setFilters] = useState({});
+const [activeFilter, setActiveFilter] = useState(null);
+
+const [rowsPerPage, setRowsPerPage] = useState(10);
+const [currentPage, setCurrentPage] = useState(1);
 
 const [categoryList, setCategoryList] = useState([]);
 const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -24,6 +29,7 @@ const [selectedModifiers,setSelectedModifiers] = useState([]);
 
 const [kitchens,setKitchens] = useState([]);
 const [selectedKitchens,setSelectedKitchens] = useState([]);
+const [loading, setLoading] = useState(false);
 
 const fileInputRef = useRef(null);
 const bgColorRef = useRef(null);
@@ -31,7 +37,7 @@ const textColorRef = useRef(null);
 const [editingIndex,setEditingIndex] = useState(null);
 
 const [form,setForm] = useState({
-   DishGroupId:"",
+DishGroupId:"",
 DishGroupCode:"",
 DishGroupName:"",
 ShortName:"",
@@ -52,7 +58,7 @@ isMemberSalesAllowed:"No"
 // ✅ API GET
 const fetchDishGroup = async () => {
 try{
-
+ setLoading(true); 
 const res = await axios.get(`${BASE_URL}/dishgroup`);
 
 setEntries(res.data);
@@ -61,9 +67,10 @@ setEntries(res.data);
 
 console.error("DishGroup load error:",err);
 
-}
+}finally {
+    setLoading(false);  // 🔥 STOP
+  }
 };
-
 
 // ✅ PAGE LOAD
 useEffect(()=>{
@@ -80,7 +87,7 @@ axios.get(`${BASE_URL}/kitchen`)
 axios.get(`${BASE_URL}/category`)
 .then(res => setCategoryList(res.data));
 
-},[]);
+},[filters]);
 const handleChange=(e)=>{
 const {name,type,checked,value}=e.target;
 
@@ -99,7 +106,7 @@ const handleSubmit = async (e) => {
   }
 
   try {
-
+       setLoading(true); 
     const formData = new FormData();
 
     formData.append("DishGroupId", form.DishGroupId);
@@ -145,13 +152,13 @@ const handleSubmit = async (e) => {
   } catch (err) {
     console.log(err);
     alert("Error");
+  }finally {
+    setLoading(false);  // 🔥 STOP LOADER
   }
 };
 
-
-
-const handleEdit = (index) => {
-  const row = entries[index];
+  const handleEdit = (row) => {
+  // const row = entries[index];
 
   setForm({
     DishGroupId: row.DishGroupId || "",  // ✅ MUST
@@ -171,196 +178,273 @@ const handleEdit = (index) => {
    ShowModifierTabOrder: row.ShowModifierTabOrder == 1 || row.ShowModifierTabOrder === true ? "Yes" : "No",
   });
 
-    // 🔥 ADD THIS
- setImage(
-  row.ImageName
-    ? `${BASE_URL}/images/Dish/${row.ImageName}`
-    : null
-);
+ setImage(null); // clear first
+
+if (row.ImageData) {
+  setImage(row.ImageData);
+}
+
   setBgColor(row.BackColor || "#2e7d32");
   setTextColor(row.ForeColor || "#ffffff");
 
   // 🔥 modifier selected load
-axios.get(`${BASE_URL}/dishgroupmodifier/${row.DishGroupId}`)
-.then(res => {
-  setSelectedModifiers(res.data.map(x => x.ModifierId));
-});
+      axios.get(`${BASE_URL}/dishgroupmodifier/${row.DishGroupId}`)
+      .then(res => {
+        setSelectedModifiers(res.data.map(x => x.ModifierId));
+      });
 
-// 🔥 kitchen selected load
-axios.get(`${BASE_URL}/dishgroupkitchen/${row.DishGroupId}`)
-.then(res => {
-  setSelectedKitchens(
-  res.data.map(x => Number(x.KitchenTypeCode))
-);
-});
+      // 🔥 kitchen selected load
+      axios.get(`${BASE_URL}/dishgroupkitchen/${row.DishGroupId}`)
+      .then(res => {
+        setSelectedKitchens(
+        res.data.map(x => Number(x.KitchenTypeCode))
+      );
+      });
 
-  setEditingIndex(index);
-  setShowModal(true);
-};
+        // setEditingIndex(index);
+        setEditingIndex(null);
+        setShowModal(true);
+      };
 
+      const filteredData = entries.filter((row) => {
+        return Object.keys(filters).every((key) => {
+          if (!filters[key]) return true;
 
+         let value = row[key] !== undefined && row[key] !== null ? row[key].toString() : "";
 
-return(
+          // 🔥 FIX FOR YES/NO
+          if (key === "isActive") {
+            value = row.isActive ? "yes" : "no";
+          }
 
-<div className="dg-page">
+          return String(value)
+            .toLowerCase()
+            .includes(filters[key].toLowerCase());
+        });
+      });
 
-<h1 className="dg-title">Dish Group</h1>
+      const totalRows = filteredData.length;
 
-<div className="dg-btn-right">
-<button
-className="dg-new-btn"
-onClick={()=>{
-setForm({
-  DishGroupId:"",
-DishGroupCode:"",
-DishGroupName:"",
-ShortName:"",
-SortCode:"",
-KitchenSortCode:"",
-CategoryId:"",
-NameInOtherLanguage:"",
-ShowModifierTabOrder:"No",
-isActive:"No",
-isDiscountAllowed:"No",
-isTaxAllowed:"No",
-isKitchenprint:"No",
-isServiceCharge:"No",
-isMemberSalesAllowed:"No"
-});
+      const totalPages =
+        rowsPerPage === "ALL"
+          ? 1
+          : Math.ceil(totalRows / rowsPerPage);
 
-setEditingIndex(null);
-setShowModal(true);
-}}
->
-New
-</button>
-</div>
+      const startIndex =
+        rowsPerPage === "ALL"
+          ? 0
+          : (currentPage - 1) * rowsPerPage;
 
-{showCategoryModal && (
-  <div className="popup">
-    <div className="popup-box">
+      const endIndex =
+        rowsPerPage === "ALL"
+          ? totalRows
+          : startIndex + rowsPerPage;
 
-      <h2>Select Category</h2>
+      const paginatedData =
+        rowsPerPage === "ALL"
+          ? filteredData
+          : filteredData.slice(startIndex, endIndex);
 
-      {categoryList.map(c => (
-        <div
-          key={c.CategoryId}
-          className="popup-item"
-          onClick={() => {
-            setForm({
-              ...form,
-              CategoryId: c.CategoryId
-            });
-            setShowCategoryModal(false);
-          }}
-        >
-          {c.CategoryName}
-        </div>
-      ))}
+          const showingFrom = totalRows === 0 ? 0 : startIndex + 1;
 
-      <button onClick={() => setShowCategoryModal(false)}>
-        Close
-      </button>
+  const showingTo =
+  rowsPerPage === "ALL"
+    ? totalRows
+    : Math.min(startIndex + rowsPerPage, totalRows);
 
-    </div>
-  </div>
-)}
+      return(
 
-{showModal && (
+      <div className="dg-page">
 
-<div className="dg-modal-overlay">
+      <div className="dg-header">
 
+  <h1 className="dg-title">Dish Group</h1>
 
-<div className="dg-modal">
+  <div className="dg-header-right">
 
-<h2>Add Dish Group</h2>
+    <button
+      className="dg-new-btn"
+     onClick={async () => {
 
-<form onSubmit={handleSubmit}>
+  try {
+    const res = await axios.get(`${BASE_URL}/dishgroup/nextcode`);
 
-<div className="dg-layout">
+    setForm({
+      DishGroupId:"",
+      DishGroupCode: res.data.code, // 🔥 AUTO NUMBER
+      DishGroupName:"",
+      ShortName:"",
+      SortCode:"",
+      KitchenSortCode:"",
+      CategoryId:"",
+      NameInOtherLanguage:"",
+      ShowModifierTabOrder:"No",
+      isActive:"No",
+      isDiscountAllowed:"No",
+      isTaxAllowed:"No",
+      isKitchenprint:"No",
+      isServiceCharge:"No",
+      isMemberSalesAllowed:"No"
+    });
 
-{/* LEFT PANEL */}
+    setEditingIndex(null);
+    setShowModal(true);
 
-<div className="dg-left">
-
-<div className="dg-input-grid">
-
-<div className="dg-field">
-<label>Dish Group Code</label>
-<input
-type="text"
-name="DishGroupCode"
-value={form.DishGroupCode}
-onChange={handleChange}
-/>
-</div>
-
-<div className="dg-field">
-<label>Dish Group Name</label>
-<input
-type="text"
-name="DishGroupName"
-value={form.DishGroupName}
-onChange={handleChange}
-/>
-</div>
-
-<div className="dg-field">
-<label>Short Name</label>
-<input
-type="text"
-name="ShortName"
-value={form.ShortName}
-onChange={handleChange}
-/>
-</div>
-
-<div className="dg-field">
-<label>Sort Code</label>
-<input
-type="number"
-name="SortCode"
-placeholder="Sort Code"
-value={form.SortCode}
-onChange={handleChange}
-/>
-</div>
-
-<div className="dg-field">
-<label>Kitchen Sort Code</label>
-<input
-type="number"
-name="KitchenSortCode"
-placeholder="Kitchen Sort Code"
-value={form.KitchenSortCode}
-onChange={handleChange}
-/>
-</div>
-
-<div className="dg-category-row">
-<div className="dg-field">
-<label>Category</label>
-<input
-type="text"
-name="CategoryId"
-placeholder="Category"
-value={
-    categoryList.find(c => c.CategoryId === form.CategoryId)?.CategoryName || ""
+  } catch (err) {
+    console.log("CODE LOAD ERROR", err);
   }
-  readOnly
-/>
+
+}}
+    >
+      New
+    </button>
+
+    <select
+      className="dg-dropdown"
+      value={rowsPerPage}
+      onChange={(e) => {
+        const value = e.target.value;
+        setRowsPerPage(value === "ALL" ? "ALL" : Number(value));
+        setCurrentPage(1);
+      }}
+    >
+      <option value={10}>10</option>
+      <option value={20}>20</option>
+      <option value={30}>30</option>
+      <option value={40}>40</option>
+      <option value={50}>50</option>
+      <option value="ALL">ALL</option>
+    </select>
+
+  </div>
+
 </div>
 
-<button
-type="button"
-onClick={async () => {
-  const res = await axios.get(`${BASE_URL}/category`);
-  setCategoryList(res.data);
-  setShowCategoryModal(true);
-}}
->
-...
-</button>
+      {showCategoryModal && (
+        <div className="popup">
+          <div className="popup-box">
+
+            <h2>Select Category</h2>
+
+            {categoryList.map(c => (
+              <div
+                key={c.CategoryId}
+                className="popup-item"
+                onClick={() => {
+                  setForm({
+                    ...form,
+                    CategoryId: c.CategoryId
+                  });
+                  setShowCategoryModal(false);
+                }}
+              >
+                {c.CategoryName}
+              </div>
+            ))}
+
+            <button onClick={() => setShowCategoryModal(false)}>
+              Close
+            </button>
+
+          </div>
+        </div>
+      )}
+
+      {showModal && (
+
+      <div className="dg-modal-overlay">
+
+
+      <div className="dg-modal">
+
+      <h2>Add Dish Group</h2>
+
+      <form onSubmit={handleSubmit}>
+
+      <div className="dg-layout">
+
+      {/* LEFT PANEL */}
+
+      <div className="dg-left">
+
+      <div className="dg-input-grid">
+
+      <div className="dg-field">
+      <label>Dish Group Code</label>
+      <input
+        type="text"
+        name="DishGroupCode"
+        value={form.DishGroupCode}
+        disabled
+      />
+      </div>
+
+      <div className="dg-field">
+      <label>Dish Group Name</label>
+      <input
+      type="text"
+      name="DishGroupName"
+      value={form.DishGroupName}
+      onChange={handleChange}
+      />
+      </div>
+
+      <div className="dg-field">
+      <label>Short Name</label>
+      <input
+      type="text"
+      name="ShortName"
+      value={form.ShortName}
+      onChange={handleChange}
+      />
+      </div>
+
+      <div className="dg-field">
+      <label>Sort Code</label>
+      <input
+      type="number"
+      name="SortCode"
+      placeholder="Sort Code"
+      value={form.SortCode}
+      onChange={handleChange}
+      />
+      </div>
+
+      <div className="dg-field">
+      <label>Kitchen Sort Code</label>
+      <input
+      type="number"
+      name="KitchenSortCode"
+      placeholder="Kitchen Sort Code"
+      value={form.KitchenSortCode}
+      onChange={handleChange}
+      />
+      </div>
+
+      <div className="dg-category-row">
+      <div className="dg-field">
+      <label>Category</label>
+      <input
+      type="text"
+      name="CategoryId"
+      placeholder="Category"
+      value={
+          categoryList.find(c => c.CategoryId === form.CategoryId)?.CategoryName || ""
+        }
+        readOnly
+      />
+      </div>
+
+      <button
+      type="button"
+      onClick={async () => {
+        const res = await axios.get(`${BASE_URL}/category`);
+        setCategoryList(res.data);
+        setShowCategoryModal(true);
+      }}
+      >
+      ...
+      </button>
 
 </div>
 
@@ -651,10 +735,7 @@ type="checkbox"
 checked={selectedModifiers.includes(m.ModifierId)}
 onChange={(e)=>{
 
-
-
-
-  if(e.target.checked){
+if(e.target.checked){
          setSelectedModifiers([...selectedModifiers,m.ModifierId]);
    }else{
      setSelectedModifiers(selectedModifiers.filter(id=>id!==m.ModifierId));
@@ -770,9 +851,47 @@ Cancel
 <thead>
 <tr>
 <th>S.No</th>
-<th>DishGroupCode</th>
-<th>DishGroupName</th>
-<th>Active</th>
+<th onClick={() => setActiveFilter("DishGroupCode")}>
+  DishGroupCode
+  {activeFilter === "DishGroupCode" && (
+    <input
+      onClick={(e)=>e.stopPropagation()}
+      type="text"
+      value={filters.DishGroupCode || ""}
+      onChange={(e)=>{
+       setFilters({...filters, DishGroupCode: e.target.value});
+      setCurrentPage(1); // ✅ add this
+   }}
+    />
+  )}
+</th>
+<th onClick={() => setActiveFilter("DishGroupName")}>
+  DishGroupName
+  {activeFilter === "DishGroupName" && (
+    <input
+      onClick={(e)=>e.stopPropagation()}
+      type="text"
+      value={filters.DishGroupName || ""}
+      onChange={(e)=>
+        setFilters({...filters, DishGroupName: e.target.value})
+      }
+    />
+  )}
+</th>
+<th onClick={() => setActiveFilter("isActive")}>
+  Active
+  {activeFilter === "isActive" && (
+    <input
+      onClick={(e)=>e.stopPropagation()}
+      type="text"
+      placeholder="Yes/No"
+      value={filters.isActive || ""}
+      onChange={(e)=>
+        setFilters({...filters, isActive: e.target.value})
+      }
+    />
+  )}
+</th>
 <th>KitchenPrint</th>
 <th>Discount</th>
 <th>SortCode</th>
@@ -782,19 +901,22 @@ Cancel
 
 <tbody>
 
-{entries.length===0 ? (
+{loading ? (
+  <tr>
+    <td colSpan="8">
+      <div className="spinner"></div>
+    </td>
+  </tr>
 
-<tr>
+) : entries.length === 0 ? (
 
-<td colSpan="8" style={{textAlign:"left"}}>
-No entries yet
-</td>
+  <tr>
+    <td colSpan="8">No Data Found</td>
+  </tr>
 
-</tr>
+) : (paginatedData.map((row,index)=>(//(entries.map((row,index)=>(
 
-):(entries.map((row,index)=>(
-
-<tr key={index} onClick={() => handleEdit(index)} style={{cursor:"pointer"}}>
+<tr key={index} onClick={() => handleEdit(row)} style={{cursor:"pointer"}}>
 
 <td>{index+1}</td>
 <td>{row.DishGroupCode}</td>
@@ -814,6 +936,30 @@ No entries yet
 </tbody>
 
 </table>
+
+</div>
+
+<div style={{ marginTop: "10px", display: "flex", gap: "10px", alignItems: "center" }}>
+
+  <button
+    onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+    disabled={currentPage === 1}
+  >
+    Prev
+  </button>
+
+  <span>
+    page {showingFrom}–{showingTo} of {totalRows}
+  </span>
+
+  <button
+    onClick={() =>
+      setCurrentPage((p) => Math.min(p + 1, totalPages))
+    }
+    disabled={currentPage === totalPages}
+  >
+    Next
+  </button>
 
 </div>
 

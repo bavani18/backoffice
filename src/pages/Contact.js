@@ -7,6 +7,17 @@ function Contact() {
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState(null);
 
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const [filters, setFilters] = useState({});
+  const [activeFilter, setActiveFilter] = useState(null);
+
+  const [loading, setLoading] = useState(false);
+
+  const user = JSON.parse(localStorage.getItem("user"));
+  const userId = user?.UserId;
+
   const [form, setForm] = useState({
     kitchen_code: "",
     kitchen_name: "",
@@ -21,6 +32,7 @@ function Contact() {
 
   const fetchKitchen = async () => {
     try {
+      setLoading(true);   // 🔥 START
       const res = await axios.get(`${BASE_URL}/kitchen`);
       const data = res.data.map((item) => ({
         id: item.KitchenTypeId,
@@ -31,7 +43,9 @@ function Contact() {
       setEntries(data);
     } catch (err) {
       alert("Failed to load kitchen data");
-    }
+    } finally {
+    setLoading(false);  
+  }
   };
 
   const fetchNextCode = async () => {
@@ -89,7 +103,7 @@ function Contact() {
         KitchenTypeCode: parseInt(form.kitchen_code),
         KitchenTypeName: form.kitchen_name,
         isActive: form.active === "Yes" ? 1 : 0,
-        CreatedBy: "22222222-2222-2222-2222-222222222222",
+        CreatedBy: userId,
       };
 
       if (editingId) {
@@ -111,14 +125,79 @@ function Contact() {
     }
   };
 
+  const filteredData = entries.filter((row) => {
+  return Object.keys(filters).every((key) => {
+    if (!filters[key]) return true;
+
+    let value = row[key];
+
+    return String(value)
+      .toLowerCase()
+      .includes(filters[key].toLowerCase());
+  });
+});
+
+  const totalRows = filteredData.length;
+
+      const totalPages =
+        rowsPerPage === "ALL"
+          ? 1
+          : Math.ceil(totalRows / rowsPerPage);
+
+      const startIndex =
+        rowsPerPage === "ALL"
+          ? 0
+          : (currentPage - 1) * rowsPerPage;
+
+      const endIndex =
+        rowsPerPage === "ALL"
+          ? totalRows
+          : startIndex + rowsPerPage;
+
+      const paginatedData =
+        rowsPerPage === "ALL"
+          ? filteredData
+          : filteredData.slice(startIndex, endIndex);
+
+          const showingFrom = totalRows === 0 ? 0 : startIndex + 1;
+
+  const showingTo =
+  rowsPerPage === "ALL"
+    ? totalRows
+    : Math.min(startIndex + rowsPerPage, totalRows);
+
   return (
     <div className="kitchen_container">
-      <h1 className="kitchen_title">Kitchen</h1>
 
-      <div className="kitchen_header">
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+
+     <h1 className="kitchen_title">Kitchen</h1>
+
+     {/* <div className="kitchen-btn-right" style={{ display: "flex", gap: "10px" }}></div> */}
+     
+   <div className="kitchen-btn-right">
         <button className="kitchen_new_btn" onClick={openNewModal}>
           New
         </button>
+
+        {/* 🔥 ROW SELECT */}
+        <select
+          value={rowsPerPage}
+          onChange={(e) => {
+            const value = e.target.value;
+            setRowsPerPage(value === "ALL" ? "ALL" : Number(value));
+            setCurrentPage(1);
+          }}
+        >
+           <option value={10}>10</option>
+          <option value={20}>20</option>
+          <option value={30}>30</option>
+          <option value={40}>40</option>
+          <option value={50}>50</option>
+          <option value="ALL">ALL</option>
+        </select>
+
+      </div>
       </div>
 
       {showModal && (
@@ -164,8 +243,8 @@ function Contact() {
 </div>
 
               <div className="kitchen_modal_footer">
-                <button type="submit" className="kitchen_save_btn">
-                  {editingId ? "Update" : "Save"}
+                <button type="submit" className="kitchen_save_btn" disabled={loading}>
+                  {loading ? "Saving..." : editingId ? "Update" : "Save"}
                 </button>
 
                 <button
@@ -184,16 +263,60 @@ function Contact() {
       <table className="kitchen_table">
         <thead>
           <tr>
-            {/* <th>S.No</th> */}
-            <th>Kitchen Code</th>
-            <th>Kitchen Name</th>
-            <th>Active</th>
-            <th>Actions</th>
+           {/* <th>S.No</th> */}
+
+<th onClick={() => setActiveFilter("kitchen_code")}>
+  Kitchen Code
+
+  {activeFilter === "kitchen_code" && (
+    <input
+      type="text"
+      onClick={(e) => e.stopPropagation()}
+      value={filters.kitchen_code || ""}
+      onChange={(e) =>
+        setFilters({ ...filters, kitchen_code: e.target.value })
+      }
+    />
+  )}
+</th>
+
+<th onClick={() => setActiveFilter("kitchen_name")}>
+  Kitchen Name
+
+  {activeFilter === "kitchen_name" && (
+    <input
+      type="text"
+      onClick={(e) => e.stopPropagation()}
+      value={filters.kitchen_name || ""}
+      onChange={(e) =>
+        setFilters({ ...filters, kitchen_name: e.target.value })
+      }
+    />
+  )}
+</th>
+
+<th onClick={() => setActiveFilter("active")}>
+  Active
+
+  {activeFilter === "active" && (
+    <input
+      type="text"
+      onClick={(e) => e.stopPropagation()}
+      value={filters.active || ""}
+      onChange={(e) =>
+        setFilters({ ...filters, active: e.target.value })
+      }
+      placeholder="yes/no"
+    />
+  )}
+</th>
+
+<th>Actions</th>
           </tr>
         </thead>
 
         <tbody>
-          {entries.map((row, index) => (
+          {filteredData.map((row, index) => (
             <tr key={row.id}>
               {/* <td>{index + 1}</td> */}
               <td>{row.kitchen_code}</td>
@@ -206,6 +329,30 @@ function Contact() {
           ))}
         </tbody>
       </table>
+
+      <div style={{ marginTop: "10px", display: "flex", gap: "10px", alignItems: "center" }}>
+
+  <button
+    onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+    disabled={currentPage === 1}
+  >
+    Prev
+  </button>
+
+  <span>
+    page {showingFrom}–{showingTo} of {totalRows}
+  </span>
+
+  <button
+    onClick={() =>
+      setCurrentPage((p) => Math.min(p + 1, totalPages))
+    }
+    disabled={currentPage === totalPages}
+  >
+    Next
+  </button>
+
+</div>
     </div>
   );
 }
