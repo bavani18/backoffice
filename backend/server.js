@@ -443,11 +443,11 @@ if (!catId || catId === "") {
 
 let request = pool.request()
 .input("CategoryId", sql.UniqueIdentifier, catId)
-.input("CategoryCode", sql.VarChar(20), CategoryCode)
-.input("CategoryName", sql.VarChar(100), CategoryName)
+.input("CategoryCode", sql.VarChar(20), (CategoryCode || "").substring(0,20))
+.input("CategoryName", sql.VarChar(100), (CategoryName || "").substring(0,100))
 .input("SortCode", sql.Int, SortCode)
 .input("isActive", sql.Bit, isActive ?? false)
-.input("ShortName", sql.VarChar(50), ShortName)
+.input("ShortName", sql.VarChar(50), (ShortName || "").substring(0,50))
 .input("BackColor", sql.NVarChar(50), safeBackColor)
 .input("ForeColor", sql.NVarChar(50), safeForeColor)
 .input("isKitchenPrint", sql.Bit, isKitchenPrint ?? false)
@@ -815,6 +815,25 @@ res.json(data);
   }
 });
 
+ app.get("/dishgroup/nextcode", async (req, res) => {
+  try {
+    console.log("NEXTCODE API HIT");
+
+    const pool = await poolPromise;
+
+    const result = await pool.request().query(`
+      SELECT 
+        ISNULL(MAX(TRY_CAST(DishGroupCode AS INT)), 0) + 1 AS NewCode
+      FROM DishGroupMaster
+    `);
+
+    res.json({ code: result.recordset[0].NewCode });
+
+  } catch (err) {
+    console.log("NEXTCODE ERROR FULL:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
 //GET DishGroup by ID (Edit screen)
 
 app.get("/dishgroup/:id", async (req, res) => {
@@ -860,25 +879,14 @@ app.post("/dishgroup", upload.single("image"), async (req, res) => {
     } = req.body;
 
     const pool = await poolPromise;
+    // 🔥 AUTO GENERATE CODE (ADD HERE)
+const codeResult = await pool.request().query(`
+  SELECT 
+    ISNULL(MAX(TRY_CAST(DishGroupCode AS INT)), 0) + 1 AS NewCode
+  FROM DishGroupMaster
+`);
 
-     app.get("/dishgroup/nextcode", async (req, res) => {
-  try {
-    const pool = await poolPromise;
-
-    const result = await pool.request().query(`
-      SELECT 
-        ISNULL(MAX(TRY_CAST(DishGroupCode AS INT)), 0) + 1 AS NewCode
-      FROM DishGroupMaster
-    `);
-
-    res.json({ code: result.recordset[0].NewCode });
-
-  } catch (err) {
-    console.log("NEXTCODE ERROR:", err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
+const newCode = codeResult.recordset[0].NewCode;
     let imageId = null;
 
 if (req.file) {
@@ -906,7 +914,7 @@ const imageBuffer = fs.readFileSync(req.file.path);
       // 🔄 UPDATE
       await pool.request()
         .input("DishGroupId", sql.UniqueIdentifier, dgId)
-        .input("DishGroupCode", sql.Int, DishGroupCode)
+         .input("DishGroupCode", sql.VarChar(20), DishGroupCode)
         .input("DishGroupName", sql.VarChar(100), DishGroupName)
         .input("SortCode", sql.Int, SortCode)
         .input("isActive", sql.Bit, isActive == 1)
@@ -916,7 +924,11 @@ const imageBuffer = fs.readFileSync(req.file.path);
         .input("isServiceCharge", sql.Bit, isServiceCharge == 1)
         .input("isMemberSalesAllowed", sql.Bit, isMemberSalesAllowed == 1)
         .input("ShortName", sql.VarChar(50), ShortName)
-        .input("CategoryId", sql.UniqueIdentifier, CategoryId)
+        .input(
+        "CategoryId",
+        sql.UniqueIdentifier,
+        CategoryId && CategoryId !== "null" ? CategoryId : null
+      )
         .input("KitchenSortCode", sql.Int, KitchenSortCode)
         .input("BackColor", sql.VarChar(50), BackColor)
         .input("ForeColor", sql.VarChar(50), ForeColor)
@@ -946,7 +958,7 @@ const imageBuffer = fs.readFileSync(req.file.path);
       // 🆕 INSERT
       await pool.request()
         .input("DishGroupId", sql.UniqueIdentifier, dgId)
-        .input("DishGroupCode", sql.Int, newCode)
+        .input("DishGroupCode", sql.VarChar(20), String(newCode))
         .input("DishGroupName", sql.VarChar(100), DishGroupName)
         .input("SortCode", sql.Int, SortCode)
         .input("isActive", sql.Bit, isActive == 1)
@@ -955,21 +967,27 @@ const imageBuffer = fs.readFileSync(req.file.path);
         .input("isKitchenPrint", sql.Bit, isKitchenPrint == 1)
         .input("isServiceCharge", sql.Bit, isServiceCharge == 1)
         .input("isMemberSalesAllowed", sql.Bit, isMemberSalesAllowed == 1)
-        .input("ShortName", sql.VarChar(50), ShortName)
-        .input("CategoryId", sql.UniqueIdentifier, CategoryId)
+        .input("ShortName", sql.VarChar(50), ShortName || "")
+        .input(
+          "CategoryId",
+          sql.UniqueIdentifier,
+          CategoryId && CategoryId !== "null" ? CategoryId : null
+        )
         .input("KitchenSortCode", sql.Int, KitchenSortCode)
-        .input("BackColor", sql.VarChar(50), BackColor)
-        .input("ForeColor", sql.VarChar(50), ForeColor)
+        .input("BackColor", sql.VarChar(50), BackColor || "#000000")
+       .input("ForeColor", sql.VarChar(50), ForeColor || "#ffffff")
         .input("ImageId", sql.UniqueIdentifier, imageId)
-       .input("KitchenType", sql.VarChar(50), "")
-       .input("SubkitchenType", sql.VarChar(50), "")
+      //  .input("KitchenType", sql.VarChar(50), "")
+      //  .input("SubkitchenType", sql.VarChar(50), "")
+       .input("CreatedBy", sql.UniqueIdentifier, uuidv4())
+        .input("CreatedOn", sql.DateTime, new Date())
         .query(`
           INSERT INTO DishGroupMaster
           (DishGroupId,DishGroupCode,DishGroupName,SortCode,isActive,ShortName,CategoryId,KitchenSortCode,BackColor,ForeColor,ImageId,isDiscountAllowed,
-          isTaxAllowed,isKitchenPrint,isServiceCharge,isMemberSalesAllowed,KitchenType, SubkitchenType)
+          isTaxAllowed,isKitchenPrint,isServiceCharge,isMemberSalesAllowed,CreatedBy, CreatedOn)
           VALUES
           (@DishGroupId,@DishGroupCode,@DishGroupName,@SortCode,@isActive,@ShortName,@CategoryId,@KitchenSortCode,@BackColor,@ForeColor,@ImageId,@isDiscountAllowed,
-          @isTaxAllowed,@isKitchenPrint,@isServiceCharge,@isMemberSalesAllowed,@KitchenType,@SubkitchenType)
+          @isTaxAllowed,@isKitchenPrint,@isServiceCharge,@isMemberSalesAllowed,@CreatedBy,@CreatedOn)
         `);
     }
 
@@ -1031,8 +1049,13 @@ for (let m of mods) {
     res.json({ message: "DishGroup saved successfully", DishGroupId: dgId });
 
   } catch (err) {
-    console.log(err);
-    res.status(500).send("Error");
+    console.log("🔥 FINAL ERROR FULL:", err);
+    console.log("🔥 FINAL ERROR MSG:", err.message);
+
+    res.status(500).json({
+      error: err.message,
+      stack: err.stack
+    });
   }
 });
 
@@ -1182,7 +1205,7 @@ app.get("/dish", async (req, res) => {
                                                               from ImageList I
                                                               where  D.ImageId = I.ImageId) ImageData
                                                FROM DishMaster D
-                                                ORDER BY D.CreatedOn DESC`);
+                                                ORDER BY TRY_CAST(D.DishCode AS INT) DESC`);
     const data = result.recordset.map(row => {
   let imageBase64 = null;
 
@@ -1202,12 +1225,39 @@ res.json(data);
   }
 });
 
+app.get("/dish/nextcode", async (req, res) => {
+  try {
+    const pool = await poolPromise;
+
+    const result = await pool.request().query(`
+      SELECT 
+        ISNULL(MAX(TRY_CAST(DishCode AS INT)), 0) + 1 AS NewCode
+      FROM DishMaster
+    `);
+
+    res.json({ code: String(result.recordset[0].NewCode) });
+
+  } catch (err) {
+    console.log("DISH NEXTCODE ERROR:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.post("/dish", upload.single("image"), async (req, res) => {
   try {
     const pool = await poolPromise;
-    const d = req.body;
+   const d = req.body;
 
     const dishId = d.DishId ? d.DishId : uuidv4();
+
+    // 🔥 AUTO GENERATE DISH CODE (ADD HERE)
+const codeResult = await pool.request().query(`
+  SELECT 
+    ISNULL(MAX(TRY_CAST(DishCode AS INT)), 0) + 1 AS NewCode
+  FROM DishMaster
+`);
+
+const newDishCode = codeResult.recordset[0].NewCode;
 
     let imageId = null;
 
@@ -1251,8 +1301,6 @@ app.post("/dish", upload.single("image"), async (req, res) => {
         .input("ImageId", sql.UniqueIdentifier, imageId)
         .input("IsActive", sql.Bit, d.IsActive ?? false)
         .input("iskitchenPrint", sql.Bit, d.iskitchenPrint ?? false)
-        .input("KitchenType", sql.Int, Number(d.KitchenType) || 0)
-        .input("SubkitchenType", sql.Int, Number(d.SubkitchenType) || 0)
         .input("isDiscountAllowed", sql.Bit, d.isDiscountAllowed ?? false)
         .input("IsTaxAllowed", sql.Bit, d.IsTaxAllowed ?? false)
         .input("IsStockDish", sql.Bit, d.IsStockDish ?? false)
@@ -1277,8 +1325,6 @@ app.post("/dish", upload.single("image"), async (req, res) => {
             ImageId = COALESCE(@ImageId, ImageId),
             IsActive=@IsActive,
             iskitchenPrint=@iskitchenPrint,
-            KitchenType=@KitchenType,
-            SubkitchenType=@SubkitchenType,
             isDiscountAllowed=@isDiscountAllowed,
             IsTaxAllowed=@IsTaxAllowed,
             IsStockDish=@IsStockDish,
@@ -1295,7 +1341,7 @@ app.post("/dish", upload.single("image"), async (req, res) => {
       // 🆕 INSERT (ALL COLUMNS)
       await pool.request()
         .input("DishId", sql.UniqueIdentifier, dishId)
-        .input("DishCode", sql.NVarChar, d.DishCode || "")
+        .input("DishCode", sql.VarChar(20), String(newDishCode))
         .input("Name", sql.NVarChar, d.Name || "")
         .input("ShortName", sql.NVarChar, d.ShortName || "")
         .input("Description", sql.NVarChar, d.Description || "")
