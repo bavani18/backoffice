@@ -1354,18 +1354,18 @@ const newDishCode = codeResult.recordset[0].NewCode;
 
         .input("NameInOtherLanguage", sql.NVarChar, d.NameInOtherLanguage || "")
         .input("ImageId", sql.UniqueIdentifier, imageId)
-        .input("IsActive", sql.Bit, d.IsActive ?? false)
-        .input("iskitchenPrint", sql.Bit, d.iskitchenPrint ?? false)
+        .input("IsActive", sql.Bit, Number(d.IsActive) === 1)
+        .input("iskitchenPrint", sql.Bit, Number(d.iskitchenPrint) === 1)
         .input("KitchenType", sql.Int, Number(d.KitchenType) || 0)
         .input("SubkitchenType", sql.Int, Number(d.SubkitchenType) || 0)
-        .input("isDiscountAllowed", sql.Bit, d.isDiscountAllowed ?? false)
-        .input("IsTaxAllowed", sql.Bit, d.IsTaxAllowed ?? false)
-        .input("IsStockDish", sql.Bit, d.IsStockDish ?? false)
-        .input("isFOC", sql.Bit, d.isFOC ?? false)
-        .input("isServiceCharge", sql.Bit, d.isServiceCharge ?? false)
-        .input("isFavourite", sql.Bit, d.isFavourite ?? false)
-        .input("isMultiPrice", sql.Bit, d.isMultiPrice ?? false)
-        .input("isOpenitem", sql.Bit, d.isOpenitem ?? false)
+        .input("isDiscountAllowed", sql.Bit, Number(d.isDiscountAllowed) === 1)
+        .input("IsTaxAllowed", sql.Bit, Number(d.IsTaxAllowed) === 1)
+        .input("IsStockDish", sql.Bit, Number(d.IsStockDish) === 1)
+        .input("isFOC", sql.Bit, Number(d.isFOC) === 1)
+        .input("isServiceCharge", sql.Bit, Number(d.isServiceCharge) === 1)
+        .input("isFavourite", sql.Bit, Number(d.isFavourite) === 1)
+        .input("isMultiPrice", sql.Bit, Number(d.isMultiPrice) === 1)
+        .input("isOpenitem", sql.Bit, Number(d.isOpenitem) === 1)
 
         .query(`
           INSERT INTO DishMaster (
