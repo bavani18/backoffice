@@ -125,6 +125,9 @@ app.use("/api/pos-permission", posRoutes);
 const stockRoutes = require("./routes/stock");
 app.use("/api/stock", stockRoutes);
 
+const transstockRoutes = require("./routes/transstockRoutes");
+app.use("/api/transstockRoutes", transstockRoutes);
+
 /* ------------------- GET ALL KITCHENS ------------------- */
 app.get("/kitchen", async (req, res) => {
   try {
