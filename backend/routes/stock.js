@@ -12,12 +12,7 @@ router.get("/", async (req, res) => {
 
     let query = `
       SELECT 
-        TranId,
-        TranNo,
-        TranDate,
-        TranType,
-        SupplierName,
-        NetAmount
+       *
       FROM PurchaseHeader
     `;
 
