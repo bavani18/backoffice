@@ -567,9 +567,27 @@ VALUES
 
     res.json({ message: "Category saved successfully", CategoryId: catId });
   } catch (err) {
-    console.error(err);
-    res.status(500).send(err.message);
+  console.error("FULL ERROR:", err.message);
+
+  // ✅ Truncation error
+  if (err.message.includes("String or binary data would be truncated")) {
+    return res.status(400).json({
+      message: "Category Name or Short Name is too long (max limit exceeded)"
+    });
   }
+
+  // ✅ Image / multer error
+  if (err.message.includes("Field value too long")) {
+    return res.status(400).json({
+      message: "Image size is too large. Please upload smaller file"
+    });
+  }
+
+  // ✅ Default error
+  res.status(500).json({
+    message: "Category save failed. Please try again"
+  });
+}
 });
 /* ---------------- CATEGORY KITCHEN INSERT / DELETE ---------------- */
 
