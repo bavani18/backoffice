@@ -100,4 +100,37 @@ router.delete("/:id", async (req, res) => {
   res.json({ message: "Deleted" });
 });
 
+// 🔥 GET SINGLE (FOR EDIT)
+router.get("/:tranNo", async (req, res) => {
+  const pool = await poolPromise;
+
+  try {
+    // HEADER
+    const header = await pool.request().query(`
+      SELECT * FROM PurchaseHeader
+      WHERE TranNo = '${req.params.tranNo}'
+    `);
+
+    if (header.recordset.length === 0) {
+      return res.status(404).json({ message: "Not found" });
+    }
+
+    const tranId = header.recordset[0].TranId;
+
+    // DETAILS
+    const details = await pool.request().query(`
+      SELECT * FROM PurchaseDetail
+      WHERE TranId = '${tranId}'
+    `);
+
+    res.json({
+      ...header.recordset[0],
+      items: details.recordset
+    });
+
+  } catch (err) {
+    console.log("GET ERROR ❌", err);
+    res.status(500).json({ error: err.message });
+  }
+});
 module.exports = router;
