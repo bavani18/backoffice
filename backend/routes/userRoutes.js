@@ -9,7 +9,7 @@ const { v4: uuidv4 } = require("uuid");
 const encodePassword = (input) => {
   const original = (input || "").toString();
   const encoded = Buffer.from(original).toString("base64");
-  return `${original}-${encoded}`;
+  return encoded; 
 };
  
 /* ===============================
