@@ -8,6 +8,10 @@ export default function UserMaster() {
   const [editIndex, setEditIndex] = useState(null);
   const [showModal, setShowModal] = useState(false);
  
+  // ✅ SAFE localStorage
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const userId = user?.UserId || null;
+ 
   const emptyForm = {
     UserId: "",
     UserCode: "",
@@ -26,7 +30,7 @@ export default function UserMaster() {
  
   const [form, setForm] = useState(emptyForm);
  
-  const API = `${BASE_URL}/api/usermaster`;
+  const API = "${BASE_URL}/api/usermaster";
  
   useEffect(() => {
     fetchUsers();
@@ -69,8 +73,11 @@ export default function UserMaster() {
         ...form,
         UserCode: userCode,
         isWaiter: form.isWaiter ? 1 : 0,
-        IsDisabled: form.IsDisabled ? 1 : 0
+        IsDisabled: form.IsDisabled ? 1 : 0,
+        CreatedBy: userId || "SYSTEM" // ✅ FIXED
       };
+ 
+      console.log("Payload:", payload);
  
       await axios.post(API, payload);
  
@@ -83,7 +90,7 @@ export default function UserMaster() {
       fetchUsers();
     } catch (err) {
       console.log(err);
-      alert("Failed to save user. Check required fields and try again.");
+      alert("Failed to save user.");
     }
   };
  
@@ -99,21 +106,20 @@ export default function UserMaster() {
   return (
     <div className="user_container">
       <div className="user_top_bar">
-  <h2 className="user_title">User Master</h2>
+        <h2 className="user_title">User Master</h2>
  
-  <button
-    className="user_add_btn"
-    onClick={() => {
-      setForm({ ...emptyForm, UserCode: generateUserCode() });
-      setEditIndex(null);
-      setShowModal(true);
-    }}
-  >
-    New
-  </button>
-</div>
+        <button
+          className="user_add_btn"
+          onClick={() => {
+            setForm({ ...emptyForm, UserCode: generateUserCode() });
+            setEditIndex(null);
+            setShowModal(true);
+          }}
+        >
+          New
+        </button>
+      </div>
  
-      {/* TABLE */}
       <table className="user_table">
         <thead>
           <tr>
@@ -181,7 +187,6 @@ export default function UserMaster() {
         </tbody>
       </table>
  
-      {/* MODAL */}
       {showModal && (
         <div className="user_modal">
           <div className="user_modal_box">
@@ -189,7 +194,6 @@ export default function UserMaster() {
             <h3>{editIndex !== null ? "Edit User" : "Add User"}</h3>
  
             <div className="user_form_grid">
- 
               {[
                 ["User Code", "UserCode"],
                 ["User Name", "UserName"],
@@ -211,7 +215,6 @@ export default function UserMaster() {
                   />
                 </div>
               ))}
- 
             </div>
  
             <div className="user_checkbox_row">
