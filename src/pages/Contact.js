@@ -90,40 +90,45 @@ function Contact() {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    if (!form.kitchen_code || !form.kitchen_name) {
-      alert("Enter kitchen code and name");
-      return;
+  if (!form.kitchen_code || !form.kitchen_name) {
+    alert("Enter kitchen code and name");
+    return;
+  }
+
+  try {
+    setLoading(true); // 🔥 START LOADING
+
+    const payload = {
+      BusinessUnitId: "FBFD4E31-5C91-4DEC-86EA-989D3B5639CA",
+      KitchenTypeCode: parseInt(form.kitchen_code),
+      KitchenTypeName: form.kitchen_name,
+      isActive: form.active === "Yes" ? 1 : 0,
+      CreatedBy: userId,
+    };
+
+    if (editingId) {
+      await axios.put(`${BASE_URL}/kitchen/${editingId}`, payload);
+    } else {
+      await axios.post(`${BASE_URL}/kitchen`, payload);
     }
 
-    try {
-      const payload = {
-        BusinessUnitId: "11111111-1111-1111-1111-111111111111",
-        KitchenTypeCode: parseInt(form.kitchen_code),
-        KitchenTypeName: form.kitchen_name,
-        isActive: form.active === "Yes" ? 1 : 0,
-        CreatedBy: userId,
-      };
+    setForm({
+      kitchen_code: "",
+      kitchen_name: "",
+      active: "Yes",
+    });
 
-      if (editingId) {
-        await axios.put(`${BASE_URL}/kitchen/${editingId}`, payload);
-      } else {
-        await axios.post(`${BASE_URL}/kitchen`, payload);
-      }
+    setShowModal(false);
+    fetchKitchen();
 
-      setForm({
-        kitchen_code: "",
-        kitchen_name: "",
-        active: "Yes",
-      });
-
-      setShowModal(false);
-      fetchKitchen();
-    } catch (err) {
-      alert("Save failed");
-    }
-  };
+  } catch (err) {
+    alert("Save failed");
+  } finally {
+    setLoading(false); // 🔥 STOP LOADING
+  }
+};
 
   const filteredData = entries.filter((row) => {
   return Object.keys(filters).every((key) => {
@@ -315,19 +320,37 @@ function Contact() {
           </tr>
         </thead>
 
-        <tbody>
-          {filteredData.map((row, index) => (
-            <tr key={row.id}>
-              {/* <td>{index + 1}</td> */}
-              <td>{row.kitchen_code}</td>
-              <td>{row.kitchen_name}</td>
-              <td>{row.active}</td>
-              <td>
-                <button onClick={() => handleEdit(row)}>Edit</button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
+       <tbody>
+
+{loading ? (
+  <tr>
+    <td colSpan="4" style={{ textAlign: "center", height: "80px" }}>
+      <div className="spinner"></div>
+    </td>
+  </tr>
+
+) : filteredData.length === 0 ? (
+
+  <tr>
+    <td colSpan="4">No Data Found</td>
+  </tr>
+
+) : (
+
+  filteredData.map((row, index) => (
+    <tr key={row.id}>
+      <td>{row.kitchen_code}</td>
+      <td>{row.kitchen_name}</td>
+      <td>{row.active}</td>
+      <td>
+        <button onClick={() => handleEdit(row)}>Edit</button>
+      </td>
+    </tr>
+  ))
+
+)}
+
+</tbody>
       </table>
 
       <div style={{ marginTop: "10px", display: "flex", gap: "10px", alignItems: "center" }}>

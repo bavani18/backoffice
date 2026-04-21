@@ -18,6 +18,8 @@ const API = `${BASE_URL}`;
     isActive: true,
     SortCode: "",
     isPriceAffect: false,
+    isDishPrice: false,   // ✅ ADD
+    DishCost: 0,          // ✅ ADD
     isOpenModifier: false,
   });
 useEffect(() => {
@@ -44,18 +46,22 @@ const loadModifiers = async () => {
  const handleSave = async () => {
   try {
 
-    const cleanData = {
-      ...modifier,
-      ModifierName: modifier.ModifierName.trim(),
+   const cleanData = {
+  ...modifier,
 
-      ConflictId:
-        modifier.ConflictId && modifier.ConflictId.length === 36
-          ? modifier.ConflictId
-          : null,
+  isPriceAffect: modifier.isPriceAffect ? true : false,
+  isDishPrice: modifier.isDishPrice ? true : false,
+  DishCost: Number(modifier.DishCost) || 0,
 
-      isActive:
-        modifier.isActive === true || modifier.isActive === "true",
-    };
+  ModifierName: modifier.ModifierName.trim(),
+  ConflictId:
+    modifier.ConflictId && modifier.ConflictId.length === 36
+      ? modifier.ConflictId
+      : null,
+
+  isActive:
+    modifier.isActive === true || modifier.isActive === "true",
+};
 
     console.log("Sending:", cleanData);
 
@@ -97,6 +103,8 @@ console.log("ITEM:", item); // debug
     isActive: item.isActive ?? true,
     SortCode: item.SortCode || "",
     isPriceAffect: item.isPriceAffect ?? false,
+      isDishPrice: item.isDishPrice ?? false,   // ✅ ADD
+  DishCost: item.DishCost || 0,   
     isOpenModifier: item.isOpenModifier ?? false,
   });
 

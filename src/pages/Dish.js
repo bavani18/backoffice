@@ -79,7 +79,7 @@ import { BASE_URL } from "../config/api";
   const [dish, setDish] = useState(emptyDish);
   const [dishes, setDishes] = useState([]);
   const [editIndex, setEditIndex] = useState(null);
-  const [categoryImage, setCategoryImage] = useState(null);
+  const [categoryImage, setDishImage] = useState(null);
   const [buttonColor, setButtonColor] = useState("#2e7d32");
   const [textColor, setTextColor] = useState("#fff");
   const [displayName, setDisplayName] = useState(true);
@@ -117,12 +117,12 @@ import { BASE_URL } from "../config/api";
  
     if (file) {
       const url = URL.createObjectURL(file);
-      setCategoryImage(file);   
+      setDishImage(file);   
     }
   };
  
   const clearImage = () => {
-    setCategoryImage(null);
+    setDishImage(null);
     
   };
  
@@ -130,6 +130,11 @@ import { BASE_URL } from "../config/api";
   const applyAll = () => {};
  
   const handleSave = async () => {
+
+    if (!dish.DishGroupId || dish.DishGroupId === "") {
+  alert("Dish Group must be entered. ❗");
+  return;
+}
   try {
      setLoading(true);
       console.log("SAVE CLICKED");
@@ -141,7 +146,9 @@ import { BASE_URL } from "../config/api";
 
     // 🔥 append all fields
     Object.keys(dish).forEach((key) => {
-  if (dish[key] !== null && dish[key] !== "") {
+  if (typeof dish[key] === "boolean") {
+    formData.append(key, dish[key] ? 1 : 0);
+  } else if (dish[key] !== null && dish[key] !== "") {
     formData.append(key, dish[key]);
   }
 });
@@ -152,7 +159,16 @@ import { BASE_URL } from "../config/api";
     formData.set("QuantityOnHand", Number(dish.QuantityOnHand) || 0);
     formData.set("SordCode", Number(dish.SordCode) || 0);
     formData.append("KitchenType", "General");       
-    formData.append("SubkitchenType", ""); 
+    formData.append("SubkitchenType", "");
+    
+    formData.set("IsActive", dish.IsActive ? 1 : 0);
+    formData.set("iskitchenPrint", dish.iskitchenPrint ? 1 : 0);
+    formData.set("isDiscountAllowed", dish.isDiscountAllowed ? 1 : 0);
+    formData.set("IsTaxAllowed", dish.IsTaxAllowed ? 1 : 0);
+    formData.set("IsStockDish", dish.IsStockDish ? 1 : 0);
+    formData.set("isFOC", dish.isFOC ? 1 : 0);
+    formData.set("isServiceCharge", dish.isServiceCharge ? 1 : 0);
+    formData.set("isFavourite", dish.isFavourite ? 1 : 0);
     
      const selectedKitchens = selecteddishKitchens.map(code => {
   const k = dishkitchens.find(x => Number(x.KitchenTypeCode) === code);
@@ -202,6 +218,8 @@ formData.set(
     setShowModal(false);
     setDish(emptyDish);
     setEditIndex(null);
+    setDishImage(null);
+setExistingImage(null);
 
   } catch (err) {
     console.log("SAVE ERROR ❌", err.response?.data || err.message);
@@ -215,13 +233,24 @@ formData.set(
     setEditIndex(null);
   };
  
-  const openNewDish = () => {
-    setDish(emptyDish);
-    setSelecteddishKitchens([]);   // 🔥 ADD THIS
-    setSelecteddishModifiers([]);  // 🔥 ADD THIS
+  const openNewDish = async () => {
+  try {
+    const res = await axios.get(`${BASE_URL}/dish/nextcode`);
+
+    setDish({
+      ...emptyDish,
+      DishCode: res.data.code   // 🔥 AUTO CODE SHOW
+    });
+
+    setSelecteddishKitchens([]);
+    setSelecteddishModifiers([]);
     setEditIndex(null);
     setShowModal(true);
-  };
+
+  } catch (err) {
+    console.log("CODE LOAD ERROR ❌", err);
+  }
+};
 
   
       const getGroupName = (id) => {
@@ -232,6 +261,8 @@ formData.set(
 const handleEdit = async (data) => {
 
   setDish(data);
+
+   setExistingImage(data.ImageData);
 
   const kRes = await axios.get(`${BASE_URL}/dishkitchen/${data.DishId}`);
   const kIds = kRes.data.map(x => Number(x.KitchenTypeCode));
@@ -645,9 +676,13 @@ const totalRows = filteredData.length;
   <h2>Dish</h2>
 
   <div className="dish-header-buttons">
-    <button className="dish-save-btn1" onClick={handleSave}>
-      Save
-    </button>
+ <button 
+  className="dish-save-btn1" 
+  onClick={handleSave} 
+  disabled={loading}
+>
+  {loading ? "Saving..." : "Save"}
+</button>
 
     <button className="dish-cancel-btn2" onClick={handleCancel}>
       Cancel
@@ -663,7 +698,7 @@ const totalRows = filteredData.length;
  
                 <div className="dish-form-row1">
                   <label>DishCode</label>
-                  <input name="DishCode" value={dish.DishCode} onChange={handleChange} />
+                  <input name="DishCode" value={dish.DishCode} disabled />
                 </div>
  
                 <div className="dish-form-row1">
@@ -759,7 +794,7 @@ const totalRows = filteredData.length;
               <div className="dish-right1">
  
                 <div className="dish-tabs">
-                  <button className={activeTab === "customize" ? "active-tab" : ""} onClick={() => setActiveTab("customize")}>Category</button>
+                  <button className={activeTab === "customize" ? "active-tab" : ""} onClick={() => setActiveTab("customize")}>Dish</button>
                   <button className={activeTab === "modifier" ? "active-tab" : ""} onClick={() => setActiveTab("modifier")}>Modifier</button>
                   <button className={activeTab === "kitchen" ? "active-tab" : ""} onClick={() => setActiveTab("kitchen")}>Kitchen</button>
                 </div>
@@ -768,7 +803,7 @@ const totalRows = filteredData.length;
                   <div className="dish-customize-layout">
  
                     <div className="dish-customize-col1">
-                      <h4>Category Image</h4>
+                      <h4>Dish Image</h4>
  
                       <div className="dish-image-box1">
                         {categoryImage ? (
@@ -842,7 +877,7 @@ const totalRows = filteredData.length;
                         Display Name
                       </label>
  
-                      <button className="dish-apply-btn1" onClick={applyAll}>Apply All</button>
+                      {/* <button className="dish-apply-btn1" onClick={applyAll}>Apply All</button> */}
                     </div>
  
                     <div className="dish-customize-col1">

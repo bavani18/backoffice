@@ -4,14 +4,18 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { useParams } from "react-router-dom";
+import { BASE_URL } from "../config/api";
 
 export default function StockEntryPage() {
 
   const navigate = useNavigate();
+  const { tranNo } = useParams();
 
-   const { tranNo } = useParams();
-   
-  const [rows, setRows] = useState([]);
+   const today = new Date();
+    const day = String(today.getDate()).padStart(2, "0");
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    const year = today.getFullYear();
+    const [rows, setRows] = useState([]);
 
   const [header, setHeader] = useState({
     tranNo: "P00000001",
@@ -59,39 +63,93 @@ export default function StockEntryPage() {
   // SAVE (API CALL)
   const handleSave = async () => {
 
-    if (!header.vendorCode) {
-      alert("Vendor required");
-      return;
-    }
+  if (!header.vendorCode) {
+    alert("Vendor required");
+    return;
+  }
 
-    if (rows.length === 0) {
-      alert("No Items Added");
-      return;
-    }
+  if (rows.length === 0) {
+    alert("No Items Added");
+    return;
+  }
 
-    const payload = {
-      header: header,
-      details: rows
-    };
-
-    try {
-      const res = await axios.post(
-        "http://localhost:5000/api/stock/save",
-        payload
-      );
-
-      alert("Saved Successfully ✅");
-      setRows([]);
-
-    } catch (err) {
-      console.error(err);
-      alert("Save Failed ❌");
-    }
+  // 👉 payload create pannunga (IMPORTANT)
+  const payload = {
+    tranNo: header.tranNo,
+    supplierId: header.vendorCode,
+    supplierName: header.vendorName,
+    tranDate: header.tranDate,
+    tranType: header.tranType,
+    gstType: header.gstType,
+    gstPerc: 7,
+    items: rows
   };
+
+  try {
+    // 👉 correct API call
+    await axios.post(
+  `${BASE_URL}/api/stock/save`,
+  {
+    header,
+    details: rows
+  }
+);
+
+    alert("Saved Successfully ✅");
+    setRows([]);
+
+  } catch (err) {
+    console.error(err);
+    alert("Save Failed ❌");
+  }
+};
 
   const handleExit = () => {
   navigate("/StockPage");
 };
+
+// const { tranNo } = useParams();
+
+// 🔥 ADD THIS FUNCTION HERE
+const loadEditData = async () => {
+  try {
+    const res = await axios.get(
+      `${BASE_URL}/api/stock/${tranNo}`
+    );
+
+    const data = res.data;
+
+    // ✅ HEADER
+    setHeader({
+      tranNo: data.header.TranNo,
+      vendorCode: data.header.SupplierId,
+      vendorName: data.header.SupplierName,
+      gstType: data.header.GstType,
+      tranDate: data.header.TranDate,
+      tranType: data.header.TranType
+    });
+
+    // ✅ DETAILS FIX
+    const formattedRows = data.details.map(d => ({
+      itemCode: d.ItemCode,
+      desc: d.Description,
+      qty: d.Qty,
+      price: d.Price,
+      total: d.Amount
+    }));
+
+    setRows(formattedRows);
+
+  } catch (err) {
+    console.log("EDIT LOAD ERROR ❌", err);
+  }
+};
+
+useEffect(() => {
+  if (tranNo) {
+    loadEditData();
+  }
+}, [tranNo]);
 
   return (
     <div className="trans-container">
@@ -107,23 +165,26 @@ export default function StockEntryPage() {
           <button className="trans-small-btn">...</button>
 
           <label>Vendor Code</label>
-          <input
-            className="trans-box"
-            onChange={(e) =>
-              setHeader({ ...header, vendorCode: e.target.value })
-            }
-          />
+         <input
+              className="trans-box"
+              value={header.vendorCode}   // ✅ ADD THIS
+              onChange={(e) =>
+                setHeader({ ...header, vendorCode: e.target.value })
+              }
+            />
           <button className="trans-small-btn">...</button>
           <input
-            className="trans-box trans-long"
-            onChange={(e) =>
-              setHeader({ ...header, vendorName: e.target.value })
-            }
-          />
+              className="trans-box trans-long"
+              value={header.vendorName}   // ✅ ADD THIS
+              onChange={(e) =>
+                setHeader({ ...header, vendorName: e.target.value })
+              }
+            />
 
           <label>GST TYPE</label>
           <input
             className="trans-box trans-small"
+            value={header.gstType}   // ✅ ADD THIS
             onChange={(e) =>
               setHeader({ ...header, gstType: e.target.value })
             }
@@ -132,11 +193,11 @@ export default function StockEntryPage() {
 
         <div className="trans-header-row">
           <label>TranDate</label>
-          <input value="15" className="trans-small" />
+          <input value={day} readOnly className="trans-small" />
           <span>-</span>
-          <input value="04" className="trans-small" />
+          <input value={month} readOnly className="trans-small" />
           <span>-</span>
-          <input value="2026" className="trans-small" />
+          <input value={year} readOnly className="trans-small" />
         </div>
 
         <div className="trans-header-row">
@@ -181,24 +242,26 @@ export default function StockEntryPage() {
 
           <tbody>
 
-            <tr className="trans-entry-row">
-              <td><input value={entry.itemCode} onChange={(e)=>handleChange("itemCode",e.target.value)} /></td>
-              <td><input value={entry.desc} onChange={(e)=>handleChange("desc",e.target.value)} /></td>
-              <td>Zero</td>
-              <td>Nos</td>
-              <td><input value={entry.qty} onChange={(e)=>handleChange("qty",e.target.value)} /></td>
-              <td><input value={entry.price} onChange={(e)=>handleChange("price",e.target.value)} /></td>
-              <td>0</td>
-              <td>0</td>
-              <td>0</td>
-              <td>0</td>
-              <td>{entry.total}</td>
-              <td>0</td>
-              <td>0</td>
-              <td>
-                <button className="trans-small-add" onClick={addRow}>+</button>
-              </td>
-            </tr>
+           {!tranNo && (
+          <tr className="trans-entry-row">
+            <td><input value={entry.itemCode} onChange={(e)=>handleChange("itemCode",e.target.value)} /></td>
+            <td><input value={entry.desc} onChange={(e)=>handleChange("desc",e.target.value)} /></td>
+            <td>Zero</td>
+            <td>Nos</td>
+            <td><input value={entry.qty} onChange={(e)=>handleChange("qty",e.target.value)} /></td>
+            <td><input value={entry.price} onChange={(e)=>handleChange("price",e.target.value)} /></td>
+            <td>0</td>
+            <td>0</td>
+            <td>0</td>
+            <td>0</td>
+            <td>{entry.total}</td>
+            <td>0</td>
+            <td>0</td>
+            <td>
+              <button className="trans-small-add" onClick={addRow}>+</button>
+            </td>
+          </tr>
+          )}
 
             {rows.length === 0 ? (
               <tr>

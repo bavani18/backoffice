@@ -105,6 +105,11 @@ const handleSubmit = async (e) => {
     return;
   }
 
+    if (!form.CategoryId) {
+    alert("Category must be entered. ❗");
+    return;
+  }
+
   try {
        setLoading(true); 
     const formData = new FormData();
@@ -115,7 +120,7 @@ const handleSubmit = async (e) => {
     formData.append("ShortName", form.ShortName);
     formData.append("SortCode", form.SortCode || 0);
     formData.append("KitchenSortCode", form.KitchenSortCode || 0);
-    formData.append("CategoryId", form.CategoryId || "");
+    formData.append("CategoryId", form.CategoryId);
     formData.append("NameInOtherLanguage", form.NameInOtherLanguage);
 
    formData.append("isActive", form.isActive === "Yes" ? 1 : 0);
@@ -138,7 +143,10 @@ const handleSubmit = async (e) => {
     formData.append("KitchenTypes", JSON.stringify(
       kitchens.filter(k => selectedKitchens.includes(k.KitchenTypeCode))
     ));
-
+    
+    console.log("CategoryId 👉", form.CategoryId);
+    console.log("SortCode 👉", form.SortCode);
+    console.log("KitchenSortCode 👉", form.KitchenSortCode);
     // 🔥 FINAL API CALL
     await axios.post(`${BASE_URL}/dishgroup`, formData, {
       headers: { "Content-Type": "multipart/form-data" }
@@ -667,9 +675,9 @@ Display Name
 
 </label>
 
-<button className="dg-apply">
+{/* <button className="dg-apply">
 Apply To All
-</button>
+</button> */}
 
 </div>
 
@@ -794,8 +802,8 @@ setSelectedKitchens(selectedKitchens.filter(id=>id!==k.KitchenTypeCode));
 
 <div className="dg-modal-buttons">
 
-<button type="submit" className="dg-save">
-Save
+<button type="submit" className="dg-save" disabled={loading}>
+  {loading ? "Saving..." : "Save"}
 </button>
 
 <button

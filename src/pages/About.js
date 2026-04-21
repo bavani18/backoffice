@@ -192,8 +192,14 @@ if(editIndex !== null){
 
   const data = new FormData();
 
-Object.keys(form).forEach((key)=>{
-data.append(key,form[key]);
+Object.keys(form).forEach((key) => {
+
+  if (typeof form[key] === "boolean") {
+    data.append(key, form[key] ? 1 : 0);   // 🔥 FIX
+  } else {
+    data.append(key, form[key] ?? "");
+  }
+
 });
 
 data.append("BackColor", bgColor ? bgColor.toString() : "#000000");
@@ -267,7 +273,7 @@ if(image){
 data.append("image",image);
 }
 
-data.append("CreatedBy","00000000-0000-0000-0000-000000000001");
+data.append("CreatedBy","8C026364-77E7-4002-803B-9BBE187C60BD");
 
 await axios.post(
 `${BASE_URL}/category`,
@@ -308,7 +314,7 @@ setSuccessMsg("Category saved successfully!");
 }catch(err){
 
 console.log(err.response?.data);
-alert(err.response?.data || "Save failed");
+alert(err.response?.data?.message || "Save failed");
 
 }finally {
     setLoading(false);  // 🔥 STOP LOADER
@@ -434,10 +440,11 @@ onChange={handleChange}
 <div className="cat-form-row">
 <label>Short Name</label>
 <input
-type="text"
-name="ShortName"
-value={form.ShortName}
-onChange={handleChange}
+  type="text"
+  name="ShortName"
+  maxLength={50}   // 🔥 ADD THIS
+  value={form.ShortName}
+  onChange={handleChange}
 />
 </div>
 
@@ -606,9 +613,9 @@ Display Name
 
 </label>
 
-<button className="cat-apply-btn">
+{/* <button className="cat-apply-btn">
 Apply All
-</button>
+</button> */}
 
 </div>
 
